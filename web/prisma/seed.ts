@@ -1,38 +1,29 @@
-// Seed data. Airfields are real reference data and safe to run anywhere (idempotent upserts).
-// Everything else is a FICTIONAL demo dataset for local development only; do not run it against production.
+// LOCAL DEVELOPMENT ONLY. Loads the airfields plus a FICTIONAL demo dataset (operators, pilots, empty legs,
+// crew requests). It also wipes demo operators' empty legs, crew requests, pings and bench earnings, so it
+// refuses to run against anything but a local database. For production use `npm run db:seed:airfields`.
 import { randomBytes } from "node:crypto";
-import { HangarStatus, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../lib/password";
+import { seedAirfields } from "./airfields";
+
+const isLocal = (() => {
+  try {
+    return ["localhost", "127.0.0.1", "::1", "db"].includes(new URL(process.env.DATABASE_URL ?? "").hostname);
+  } catch {
+    return false;
+  }
+})();
+if (!isLocal && process.env.ALLOW_DEMO_SEED !== "1") {
+  console.error(
+    "Refusing to run the demo seed: DATABASE_URL does not point at a local database.\n" +
+      "This seed deletes data. For production run `npm run db:seed:airfields` instead.\n" +
+      "(Set ALLOW_DEMO_SEED=1 only if you are certain this is a throwaway database.)",
+  );
+  process.exit(1);
+}
 
 const db = new PrismaClient();
 const inDays = (n: number) => new Date(Date.now() + n * 86_400_000);
-
-// ─── Airfields ──────────────────────────────────────────────────────────────
-
-const AIRFIELDS: {
-  icao: string;
-  iata: string;
-  name: string;
-  city: string;
-  lat: number;
-  lng: number;
-  hangarStatus: HangarStatus;
-}[] = [
-  { icao: "FAPM", iata: "PZB", name: "Pietermaritzburg Airport", city: "Pietermaritzburg", lat: -29.6288, lng: 30.3986, hangarStatus: "UNKNOWN" },
-  { icao: "FALA", iata: "HLA", name: "Lanseria International Airport", city: "Johannesburg", lat: -25.9385, lng: 27.9261, hangarStatus: "HUB" },
-  { icao: "FACT", iata: "CPT", name: "Cape Town International Airport", city: "Cape Town", lat: -33.9715, lng: 18.6021, hangarStatus: "HUB" },
-  { icao: "FAOR", iata: "JNB", name: "O.R. Tambo International Airport", city: "Johannesburg", lat: -26.1392, lng: 28.246, hangarStatus: "UNKNOWN" },
-  { icao: "FADN", iata: "DUR", name: "King Shaka International Airport", city: "Durban", lat: -29.6144, lng: 31.1197, hangarStatus: "UNKNOWN" },
-  { icao: "FAKN", iata: "MQP", name: "Kruger Mpumalanga International Airport", city: "Mbombela", lat: -25.3832, lng: 31.1055, hangarStatus: "UNKNOWN" },
-  { icao: "FAPE", iata: "PLZ", name: "Chief Dawid Stuurman International Airport", city: "Gqeberha", lat: -33.9849, lng: 25.6173, hangarStatus: "UNKNOWN" },
-];
-
-async function seedAirfields() {
-  for (const a of AIRFIELDS) {
-    await db.airfield.upsert({ where: { icao: a.icao }, update: a, create: a });
-  }
-  console.log(`Seeded ${AIRFIELDS.length} airfields`);
-}
 
 // ─── Demo data ──────────────────────────────────────────────────────────────
 
@@ -256,7 +247,7 @@ async function seedPilotPool(demoOperatorId: string, demoPilotId: string) {
 }
 
 async function main() {
-  await seedAirfields();
+  await seedAirfields(db);
   const person = await seedDemoPilot();
   console.log(`Seeded ${person.fullName}`);
   const operator = await seedDemoOperator();

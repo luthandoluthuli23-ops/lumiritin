@@ -125,6 +125,33 @@ Run from cron, Task Scheduler, or a GitHub Actions schedule, from `web/`:
 | `npm run job:verify` | nightly ~02:00 SAST | re-checks consented licences against SACAA (needs `SACAA_PORTAL_URL`) |
 | `npm run job:calendar` | every 30 minutes | re-imports connected pilot calendars |
 
+## Deploying to Vercel
+
+Deploy **only the `web/` app**. Do not import `verifier/` (Python) and do not use the "Services" preset: the Python verifier cannot run inside the Next.js functions, so it needs a separate runner (see below).
+
+1. **Database.** Vercel does not host PostgreSQL. Create one on a managed provider (Neon, Supabase, Vercel's Marketplace Postgres, etc.) and copy its **pooled** connection string for the app.
+2. **Import** the repo in Vercel: choose the `web` project (Next.js), so *Root Directory* is `web`. The build command (`prisma generate && next build`) is already set in `package.json`.
+3. **Environment variables** (Project → Settings → Environment Variables):
+   - `DATABASE_URL`: the pooled connection string
+   - `SESSION_SECRET`: a **new** random 32+ character value (not the one from your local `.env`)
+   - `APP_BASE_URL`: your deployed URL, e.g. `https://lumiritin.vercel.app`
+   - optional: `NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164`, `WHATSAPP_*`, `SACAA_*`
+4. **Create the schema and reference data once**, from your own machine, pointing at the production database (use the provider's *direct*, non-pooled URL for migrations):
+   ```bash
+   cd web
+   DATABASE_URL="<direct url>" npx prisma migrate deploy
+   DATABASE_URL="<direct url>" npm run db:seed:airfields
+   ```
+   **Never run `npm run db:seed` against production.** It loads fictional demo data and deletes data; it refuses to run unless `DATABASE_URL` is local.
+5. **Deploy.** The demo role switcher is automatically disabled in production, so users sign up normally.
+
+What does not work on Vercel as-is:
+
+- **`/api/verify` and `npm run job:verify`** spawn the Python verifier, which is not part of the deployment. Run the verification job elsewhere (e.g. a scheduled GitHub Action) once the real SACAA portal is connected.
+- **Scheduled jobs.** Vercel Hobby cron runs at most once a day, but the crew-ping cascade needs to run every minute. Until a scheduler calls `npm run job:cascade`, the cascade only advances while an operator has the status page open or a pilot responds.
+- **Rate limiting** is in-memory per serverless instance, so it is only a soft limit on Vercel. Move it to a shared store (e.g. Redis) before launch.
+- Vercel's free Hobby plan is for personal, non-commercial use.
+
 ## Environment variables
 
 See [`.env.example`](.env.example) for the full, commented list. Required to run: `DATABASE_URL` and `SESSION_SECRET`. Everything else (SACAA portal, WhatsApp, concierge number, base URL) is optional locally.
