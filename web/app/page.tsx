@@ -7,7 +7,8 @@ import { countOpenEmptyLegs } from "@/lib/empty-legs";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const activeEmptyLegs = await countOpenEmptyLegs();
+  // The landing page must still load if the database is briefly unavailable: show 0 rather than a 500.
+  const activeEmptyLegs = await countOpenEmptyLegs().catch(() => 0);
 
   return (
     <main>
