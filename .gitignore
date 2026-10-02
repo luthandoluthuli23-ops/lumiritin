@@ -1,0 +1,22 @@
+# Secrets: never commit. Only .env.example is tracked.
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+.next/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Local tooling / editor / OS
+.claude/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

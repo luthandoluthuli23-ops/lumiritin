@@ -1,0 +1,510 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Accounts ───────────────────────────────────────────────────────────────
+
+enum UserRole {
+  PASSENGER
+  OPERATOR
+  PILOT
+}
+
+// Login identity. Pilots link to a Person (credential wallet); operator users link to an Operator.
+// Table is "app_user" because "user" is a reserved word in PostgreSQL.
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String // scrypt, see lib/password.ts
+  role             UserRole
+  firstName        String
+  lastName         String
+  phone            String?
+  homeAirfieldIcao String?
+  personId         String?  @unique
+  operatorId       String?
+  createdAt        DateTime @default(now())
+
+  person          Person?          @relation(fields: [personId], references: [id])
+  operator        Operator?        @relation(fields: [operatorId], references: [id])
+  charterBookings CharterBooking[]
+
+  @@index([operatorId])
+  @@map("app_user")
+}
+
+// ─── Airfields & charter ────────────────────────────────────────────────────
+
+// HUB = operator hangar hub. UNKNOWN means we have no data, not that there is no hangar.
+enum HangarStatus {
+  HUB
+  UNKNOWN
+}
+
+model Airfield {
+  icao         String       @id // FAPM
+  iata         String?      @unique // PZB
+  name         String
+  city         String
+  country      String       @default("ZA")
+  lat          Float
+  lng          Float
+  hangarStatus HangarStatus @default(UNKNOWN)
+
+  @@map("airfield")
+}
+
+enum TripType {
+  ONE_WAY
+  ROUND_TRIP
+  MULTI_LEG
+}
+
+enum AircraftClass {
+  VERY_LIGHT_JET
+  LIGHT_JET
+  MIDSIZE_JET
+  HEAVY_JET
+  TURBOPROP
+}
+
+enum CharterStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+}
+
+// An on-demand charter request with the server-computed estimate at the time of request.
+model CharterBooking {
+  id                String        @id @default(cuid())
+  reference         String        @unique // LUM-2026-X981
+  userId            String?
+  tripType          TripType
+  aircraftClass     AircraftClass
+  passengers        Int
+  legs              Json // [{ fromIcao, toIcao, date: "YYYY-MM-DD", distanceNm }]
+  totalDistanceNm   Int
+  estimatedPriceZar Int
+  contactName       String
+  contactEmail      String
+  contactPhone      String?
+  notes             String?
+  status            CharterStatus @default(REQUESTED)
+  createdAt         DateTime      @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("charter_booking")
+}
+
+// ─── Crew side (v1: credential wallet) ──────────────────────────────────────
+
+enum CrewRole {
+  PILOT
+  CABIN_CREW
+  AME
+  GROUND_CREW
+}
+
+enum CredentialType {
+  PILOT_LICENCE
+  AME_LICENCE
+  CABIN_CREW_CERT
+  OTHER
+}
+
+enum VerificationOutcome {
+  VERIFIED
+  NOT_FOUND
+  BLOCKED
+  PORTAL_ERROR
+}
+
+model Person {
+  id               String    @id @default(cuid())
+  fullName         String
+  email            String    @unique
+  whatsappE164     String? // e.g. +27821234567
+  role             CrewRole  @default(PILOT)
+  homeAirfieldIcao String? // e.g. FALA
+  travelRadiusKm   Int?
+  // External calendar (iCal) used to block out non-app flying. The URL can contain a secret token:
+  // never log it or return it to a client.
+  icalUrl          String?
+  icalSyncedAt     DateTime?
+  icalLastError    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  credentials   Credential[]
+  medicals      Medical[]
+  logbook       LogbookSummary?
+  availability  Availability[]
+  consents      Consent[]
+  notifications Notification[]
+  user          User?
+  rosterEntries CrewRoster[]
+  pings         CrewPing[]
+
+  @@map("person")
+}
+
+model Credential {
+  id                     String               @id @default(cuid())
+  personId               String
+  type                   CredentialType       @default(PILOT_LICENCE)
+  licenceNumber          String
+  licenceCategory        String? // ATPL(A), CPL(A), PPL(H)...
+  holderNameOnRecord     String? // as returned by SACAA, for name-match checks
+  portalStatus           String? // "Valid", "Suspended"...
+  issuedAt               DateTime?            @db.Date
+  expiresAt              DateTime?            @db.Date
+  lastVerifiedAt         DateTime?
+  lastVerificationResult VerificationOutcome?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  person           Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  ratings          Rating[]
+  verificationLogs VerificationLog[]
+
+  @@unique([type, licenceNumber])
+  @@index([personId])
+  @@map("credential")
+}
+
+model Rating {
+  id           String    @id @default(cuid())
+  credentialId String
+  name         String // "B737-300/900", "Instrument Rating"
+  category     String? // Type / Class
+  expiresAt    DateTime? @db.Date
+  source       String    @default("sacaa")
+
+  credential Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@unique([credentialId, name])
+  @@map("rating")
+}
+
+model Medical {
+  id        String    @id @default(cuid())
+  personId  String
+  class     Int // 1, 2, 3, 4
+  expiresAt DateTime? @db.Date
+  source    String    @default("sacaa") // or "upload"
+  updatedAt DateTime  @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, class])
+  @@map("medical")
+}
+
+model LogbookSummary {
+  id               String    @id @default(cuid())
+  personId         String    @unique
+  totalHours       Decimal   @db.Decimal(8, 1)
+  picHours         Decimal?  @db.Decimal(8, 1)
+  multiEngineHours Decimal?  @db.Decimal(8, 1)
+  turbineHours     Decimal?  @db.Decimal(8, 1)
+  instrumentHours  Decimal?  @db.Decimal(8, 1)
+  nightHours       Decimal?  @db.Decimal(8, 1)
+  lastFlightAt     DateTime? @db.Date
+  asOf             DateTime  @db.Date
+  uploadKey        String? // object-storage key for the uploaded summary
+  selfDeclared     Boolean   @default(true)
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@map("logbook_summary")
+}
+
+// A pilot's effective state is derived from these windows by lib/availability.ts:
+//   BOOKED  = any BOOKED window overlaps the time in question
+//   AVAILABLE = an unexpired AVAILABLE window covers it (endsAt is the "available until" expiry)
+//   OFF     = anything else. OFF is the absence of a window, so a lapsed AVAILABLE window needs no cleanup job.
+enum AvailabilityState {
+  AVAILABLE
+  BOOKED
+}
+
+enum AvailabilitySource {
+  MANUAL // pilot set it
+  BOOKING // locked automatically when the pilot accepted a crew request
+  OPERATOR // an operator dispatcher marked their rostered pilot busy on an internal flight
+  ICAL // imported from the pilot's external calendar
+}
+
+model Availability {
+  id            String             @id @default(cuid())
+  personId      String
+  state         AvailabilityState  @default(AVAILABLE)
+  source        AvailabilitySource @default(MANUAL)
+  startsAt      DateTime
+  endsAt        DateTime
+  note          String?
+  crewRequestId String? // set for BOOKING windows
+  operatorId    String? // set for OPERATOR windows: only that operator may release them
+  createdAt     DateTime           @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId, startsAt])
+  @@index([personId, source])
+  @@map("availability")
+}
+
+model VerificationLog {
+  id           String              @id @default(cuid())
+  credentialId String
+  ranAt        DateTime            @default(now())
+  outcome      VerificationOutcome
+  snapshot     Json? // parsed record as returned by the verifier
+  changes      Json? // field-level diff vs previous state
+  htmlSha256   String?
+  error        String?
+
+  credential Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId, ranAt])
+  @@map("verification_log")
+}
+
+// POPIA: nightly verification and WhatsApp messages only run with an active consent.
+model Consent {
+  id          String    @id @default(cuid())
+  personId    String
+  scope       String // "sacaa_verification" | "whatsapp_notifications"
+  textVersion String // version of the consent wording shown
+  grantedAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId, scope])
+  @@map("consent")
+}
+
+// One row per reminder sent; the unique key stops duplicates and resets on renewal
+// (a new expiry date means a fresh set of 90/30/7 reminders).
+model Notification {
+  id            String   @id @default(cuid())
+  personId      String
+  itemType      String // "credential" | "rating" | "medical"
+  itemId        String
+  itemExpiresAt DateTime @db.Date
+  thresholdDays Int // 90, 30, 7
+  channel       String   @default("whatsapp")
+  sentAt        DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([itemType, itemId, itemExpiresAt, thresholdDays])
+  @@map("notification")
+}
+
+// ─── Operator side (schema only in v1) ──────────────────────────────────────
+
+enum RequestStatus {
+  OPEN
+  FILLED
+  CANCELLED
+}
+
+model Operator {
+  id           String   @id @default(cuid())
+  name         String
+  aocNumber    String?  @unique
+  contactEmail String
+  baseIcao     String? // primary hangar base
+  createdAt    DateTime @default(now())
+
+  aircraft  Aircraft[]
+  requests  CrewRequest[]
+  emptyLegs EmptyLeg[]
+  users     User[]
+  roster    CrewRoster[]
+  earnings  BenchEarning[]
+
+  @@map("operator")
+}
+
+model Aircraft {
+  id             String  @id @default(cuid())
+  operatorId     String
+  registration   String  @unique // ZS-XXX
+  typeDesignator String // ICAO type, e.g. B738
+  baseIcao       String?
+  seatCapacity   Int     @default(8) // passenger seats available for charter
+  hourlyRateZar  Int? // operator's charter rate per flight hour, whole ZAR
+
+  operator  Operator      @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  requests  CrewRequest[]
+  emptyLegs EmptyLeg[]
+
+  @@map("aircraft")
+}
+
+// ─── Empty-leg marketplace ──────────────────────────────────────────────────
+
+enum EmptyLegStatus {
+  OPEN
+  SOLD_OUT
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
+// A repositioning flight sold per seat. Prices are whole ZAR per seat.
+// Remaining seats = seatsOffered - SUM(seats) of PENDING/CONFIRMED bookings (never stored).
+model EmptyLeg {
+  id                        String         @id @default(cuid())
+  operatorId                String
+  aircraftId                String
+  originIcao                String
+  destinationIcao           String
+  departureStart            DateTime // earliest departure
+  departureEnd              DateTime // latest departure
+  seatsOffered              Int
+  standardPricePerSeatZar   Int
+  discountedPricePerSeatZar Int
+  status                    EmptyLegStatus @default(OPEN)
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+
+  operator Operator          @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  aircraft Aircraft          @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  bookings EmptyLegBooking[]
+
+  @@index([status, departureStart])
+  @@index([operatorId])
+  @@map("empty_leg")
+}
+
+model EmptyLegBooking {
+  id             String        @id @default(cuid())
+  emptyLegId     String
+  passengerName  String
+  passengerEmail String
+  passengerPhone String?
+  seats          Int
+  status         BookingStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+
+  emptyLeg EmptyLeg @relation(fields: [emptyLegId], references: [id], onDelete: Cascade)
+
+  @@index([emptyLegId, status])
+  @@map("empty_leg_booking")
+}
+
+model CrewRequest {
+  id               String        @id @default(cuid())
+  operatorId       String
+  aircraftId       String?
+  role             CrewRole
+  requiredRatings  String[]
+  minTotalHours    Int?
+  departureIcao    String
+  startsAt         DateTime
+  endsAt           DateTime
+  hoursRequired    Int           @default(4)
+  status           RequestStatus @default(OPEN)
+  dispatchedAt     DateTime? // when the confirm-pings were first sent
+  assignedPersonId String? // the pilot who accepted
+  filledAt         DateTime?
+  createdAt        DateTime      @default(now())
+
+  operator Operator      @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  aircraft Aircraft?     @relation(fields: [aircraftId], references: [id])
+  pings    CrewPing[]
+  earning  BenchEarning?
+
+  @@index([status, startsAt])
+  @@map("request")
+}
+
+// ─── Crew dispatch ──────────────────────────────────────────────────────────
+
+enum RosterStatus {
+  INVITED // operator invited the pilot; the pilot has not accepted
+  ACTIVE
+}
+
+// Operators list the pilots on their roster. A pilot must accept before an operator can see or control
+// their availability. `sharedToPool` offers the pilot to other operators when idle (reciprocal bench).
+model CrewRoster {
+  id           String       @id @default(cuid())
+  operatorId   String
+  personId     String
+  status       RosterStatus @default(INVITED)
+  sharedToPool Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+
+  operator Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  person   Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([operatorId, personId])
+  @@index([personId])
+  @@map("crew_roster")
+}
+
+enum PingStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED // another pilot accepted first, or the request was withdrawn
+}
+
+// One confirm-ping to one pilot. `token` is the secret in the WhatsApp link; it works only while the ping is PENDING.
+model CrewPing {
+  id            String     @id @default(cuid())
+  crewRequestId String
+  personId      String
+  rank          Int // position in the ranked shortlist when pinged (1 = best)
+  token         String     @unique
+  status        PingStatus @default(PENDING)
+  sentAt        DateTime   @default(now())
+  expiresAt     DateTime
+  respondedAt   DateTime?
+  whatsappSent  Boolean    @default(false)
+
+  crewRequest CrewRequest @relation(fields: [crewRequestId], references: [id], onDelete: Cascade)
+  person      Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([crewRequestId, personId])
+  @@index([personId, status])
+  @@index([status, expiresAt])
+  @@map("crew_ping")
+}
+
+// What the lending operator accrues when its rostered pilot fills another operator's request.
+// ACCRUED only: there is no payout system yet.
+model BenchEarning {
+  id            String   @id @default(cuid())
+  operatorId    String // the operator that rostered the pilot
+  crewRequestId String   @unique
+  personId      String
+  hoursBilled   Int
+  amountZar     Int
+  createdAt     DateTime @default(now())
+
+  operator    Operator    @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  crewRequest CrewRequest @relation(fields: [crewRequestId], references: [id], onDelete: Cascade)
+
+  @@index([operatorId, createdAt])
+  @@map("bench_earning")
+}

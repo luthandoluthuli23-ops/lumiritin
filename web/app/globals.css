@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* ─── Design tokens (Tailwind v4: every --color-* becomes bg-/text-/border- utilities) ─── */
+@theme {
+  /* Primary Obsidian */
+  --color-obsidian: #0b0f17;
+  --color-obsidian-800: #111826;
+  --color-obsidian-700: #172033;
+  --color-glass: #161f2e; /* use with an alpha, e.g. bg-glass/80 */
+
+  /* Champagne Gold */
+  --color-gold: #d4af37;
+  --color-gold-light: #e2b857;
+  --color-gold-dim: #8f7424;
+
+  /* Tactical Slate */
+  --color-slate-tac: #8b97ab;
+  --color-slate-tac-dark: #4a5568;
+  --color-ivory: #f4efe4;
+
+  /* Status Emerald */
+  --color-emerald-status: #2fbf8f;
+  --color-alert: #e5604d;
+
+  --font-display: var(--font-cormorant), "Times New Roman", serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --shadow-gold: 0 0 0 1px rgb(212 175 55 / 0.25), 0 20px 60px -20px rgb(212 175 55 / 0.25);
+}
+
+html {
+  background: var(--color-obsidian);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-obsidian);
+  color: var(--color-ivory);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hero copy is hidden until the GSAP timeline animates it in. The CSS animation is a failsafe: if hydration is
+   slow or JS fails, the copy still appears after 3.5s. (GSAP's own end state is also opacity 1, so they agree.) */
+.hero-hidden [data-hero-line],
+.hero-hidden [data-hero-fade] {
+  opacity: 0;
+  animation: hero-failsafe 0.01s 3.5s forwards;
+}
+@keyframes hero-failsafe {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Cormorant defaults to old-style numerals; prices and counters need lining figures. */
+.font-display {
+  font-feature-settings: "lnum" 1;
+}
+
+::selection {
+  background: rgb(212 175 55 / 0.35);
+}
+
+/* Frosted glass surface used by cards, the header and the booking drawer. */
+.glass {
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.02));
+  border: 1px solid rgb(255 255 255 / 0.09);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* Cursor-following gold spotlight; --mx/--my are set by trackSpotlight() in lib/animations.ts. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    380px circle at var(--mx, 50%) var(--my, 50%),
+    rgb(226 184 87 / 0.18),
+    transparent 60%
+  );
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+.text-gold-gradient {
+  background: linear-gradient(100deg, #b8912a 0%, #e2b857 40%, #f6e3a8 55%, #d4af37 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Existing server-rendered pages (e.g. /wallet) use bare HTML tags; Tailwind's reset strips their
+   default styling, so this restores a readable baseline until they get proper components. */
+.plain-page h1 {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-gold-light);
+}
+.plain-page h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 1.75rem 0 0.5rem;
+  color: var(--color-gold);
+}
+.plain-page p {
+  margin: 0.35rem 0;
+  color: var(--color-ivory);
+}
+.plain-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+.plain-page th,
+.plain-page td {
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  text-align: left;
+}
+.plain-page a {
+  color: var(--color-gold-light);
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
