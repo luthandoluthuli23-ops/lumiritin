@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { FormError, TextField, apiErrorMessage, primaryBtn } from "@/components/ui/Field";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 export function SigninForm({ next }: { next: string | null }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,11 +25,10 @@ export function SigninForm({ next }: { next: string | null }) {
         setBusy(false);
         return;
       }
-      // Navigate within the app (fast, no full reload) and refresh so the new session shows in the
-      // shared navbar. We intentionally do NOT reset `busy` on success: the button stays in its
-      // loading state until the destination paints and this form unmounts, so there is no dead gap.
-      router.replace(data.redirect);
-      router.refresh();
+      // Full navigation to the destination. The session cookie is already set, so the authed page
+      // renders reliably — in-app router navigation could stall here and leave the button hung.
+      // We keep `busy` true so the button stays loading until the page unloads: no dead gap.
+      window.location.assign(data.redirect);
     } catch {
       setError("Network error. Please try again.");
       setBusy(false);
@@ -40,7 +38,7 @@ export function SigninForm({ next }: { next: string | null }) {
   return (
     <form onSubmit={submit} className="glass grid gap-5 rounded-3xl p-8">
       <TextField label="Email" name="email" type="email" autoComplete="email" required />
-      <TextField label="Password" name="password" type="password" autoComplete="current-password" required />
+      <PasswordField label="Password" name="password" autoComplete="current-password" required />
       <FormError message={error} />
       <button type="submit" disabled={busy} className={primaryBtn}>
         {busy ? "Signing in…" : "Sign in"}

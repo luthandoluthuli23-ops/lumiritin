@@ -9,6 +9,7 @@ import { ROLE_LABEL, type Role } from "@/lib/roles";
 import { NearestAirfieldPicker } from "@/components/charter/NearestAirfieldPicker";
 import { AirfieldAutocomplete } from "@/components/charter/AirfieldAutocomplete";
 import { FormError, TextField, apiErrorMessage, ghostBtn, primaryBtn } from "@/components/ui/Field";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 const ROLES: { id: Role; blurb: string; icon: string }[] = [
   { id: "PASSENGER", blurb: "Charter a jet or fly an empty leg at up to 75% off.", icon: "M2 16l20-7-7 20-3-9-10-4z" },
@@ -132,7 +133,7 @@ export function SignupFlow({ airfields, initialRole, next }: Props) {
             <TextField label="First name" name="firstName" autoComplete="given-name" required maxLength={60} />
             <TextField label="Last name" name="lastName" autoComplete="family-name" required maxLength={60} />
             <TextField label="Email" name="email" type="email" autoComplete="email" required />
-            <TextField label="Password" name="password" type="password" autoComplete="new-password" required minLength={10} hint="At least 10 characters." />
+            <PasswordField label="Password" name="password" autoComplete="new-password" required minLength={10} hint="At least 10 characters." />
 
             {role === "PASSENGER" && (
               <>
