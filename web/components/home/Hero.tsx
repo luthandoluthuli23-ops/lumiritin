@@ -65,7 +65,7 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto w-full max-w-7xl">
         <p data-hero-fade className="text-xs uppercase tracking-[0.4em] text-gold">
-          South Africa&rsquo;s private aviation network
+          Africa&rsquo;s private aviation network
         </p>
         <h1 className="mt-5 max-w-3xl font-display text-6xl leading-[1.02] text-ivory sm:text-8xl">
           <span className="block overflow-hidden pb-2">
