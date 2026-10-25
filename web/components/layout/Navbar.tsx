@@ -77,8 +77,8 @@ export function Navbar({ session, demoSwitcher }: Props) {
   async function signOut() {
     await post("/api/auth/signout");
     setOpen(false);
-    router.push("/");
-    router.refresh();
+    // Hard-navigate home so the page renders once as signed-out (correct navbar), with no gap.
+    window.location.assign("/");
   }
 
   return (

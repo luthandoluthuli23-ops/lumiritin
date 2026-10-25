@@ -21,12 +21,18 @@ export function SigninForm({ next }: { next: string | null }) {
         body: JSON.stringify({ email: f.get("email"), password: f.get("password"), next }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) return setError(apiErrorMessage(data));
-      router.push(data.redirect);
+      if (!res.ok) {
+        setError(apiErrorMessage(data));
+        setBusy(false);
+        return;
+      }
+      // Navigate within the app (fast, no full reload) and refresh so the new session shows in the
+      // shared navbar. We intentionally do NOT reset `busy` on success: the button stays in its
+      // loading state until the destination paints and this form unmounts, so there is no dead gap.
+      router.replace(data.redirect);
       router.refresh();
     } catch {
       setError("Network error. Please try again.");
-    } finally {
       setBusy(false);
     }
   }
@@ -36,7 +42,9 @@ export function SigninForm({ next }: { next: string | null }) {
       <TextField label="Email" name="email" type="email" autoComplete="email" required />
       <TextField label="Password" name="password" type="password" autoComplete="current-password" required />
       <FormError message={error} />
-      <button type="submit" disabled={busy} className={primaryBtn}>{busy ? "Signing in…" : "Sign in"}</button>
+      <button type="submit" disabled={busy} className={primaryBtn}>
+        {busy ? "Signing in…" : "Sign in"}
+      </button>
     </form>
   );
 }
