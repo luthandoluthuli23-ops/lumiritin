@@ -9,7 +9,7 @@ import { startSession } from "@/lib/session";
 const schema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
   password: z.string().min(1).max(128),
-  next: z.string().optional(),
+  next: z.string().nullish(), // the form sends null when there is no redirect target
 });
 
 export async function POST(req: NextRequest) {
