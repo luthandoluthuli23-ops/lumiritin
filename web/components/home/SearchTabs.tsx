@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { AIRFIELDS } from "@/lib/airfields";
 import { EASE_LUXE } from "@/lib/animations";
+import type { ReputationTier } from "@/lib/insights";
+import { ReputationRing, TierBadge } from "@/components/insights/Reputation";
 
 const TABS = [
   { id: "charter", label: "Custom Charter Quote" },
@@ -104,7 +106,24 @@ function RouteForm({ mode }: { mode: "empty" | "charter" }) {
 interface LookupResult {
   outcome: "VERIFIED" | "NOT_FOUND" | "BLOCKED" | "PORTAL_ERROR";
   error: string | null;
-  licence: { number: string; category: string | null; status: string | null; expires: string | null; ratings: { name: string; expires: string | null }[] } | null;
+  licence: {
+    number: string;
+    category: string | null;
+    status: string | null;
+    expires: string | null;
+    ratings: { name: string; expires: string | null }[];
+    source?: "sacaa_live" | "lumiritin_records";
+    lastVerified?: string | null;
+  } | null;
+  platform: {
+    onPlatform: true;
+    score: number;
+    tier: ReputationTier;
+    components: { reliability: number; compliance: number; experience: number };
+    dutiesCompleted: number;
+    totalHours: number;
+    verifiedCredentials: number;
+  } | null;
 }
 
 function PilotLookup() {
@@ -121,12 +140,19 @@ function PilotLookup() {
     try {
       const res = await fetch(`/api/verify?licence=${encodeURIComponent(licence)}`);
       const data = await res.json();
-      if (res.status === 422) setMessage("Enter a licence number (letters, digits and hyphens, 4–20 characters).");
-      else if (res.status === 429) setMessage("Too many lookups. Please wait a minute and try again.");
-      else if (!res.ok) setMessage("Lookup failed. Please try again.");
-      else if (data.outcome === "NOT_FOUND") setMessage("No licence found with that number.");
-      else if (data.outcome !== "VERIFIED") setMessage("The SACAA portal is unavailable right now. Please try again later.");
-      else setResult(data);
+      if (res.status === 422) return setMessage("Enter a licence number (letters, digits and hyphens, 4–20 characters).");
+      if (res.status === 429) return setMessage("Too many lookups. Please wait a minute and try again.");
+      if (!res.ok) return setMessage("Lookup failed. Please try again.");
+      // Show whatever we found — the live SACAA record and/or the pilot's Lumiritin standing.
+      if (!data.licence && !data.platform) {
+        return setMessage(
+          data.outcome === "NOT_FOUND"
+            ? "No records found for that licence number."
+            : "The live SACAA check is unavailable right now, and this licence isn't on Lumiritin yet.",
+        );
+      }
+      setResult(data);
+      if (!data.licence && data.platform) setMessage("Live SACAA check unavailable — showing this pilot's Lumiritin standing.");
     } catch {
       setMessage("Network error. Please try again.");
     } finally {
@@ -151,6 +177,12 @@ function PilotLookup() {
               {result.licence.category ?? "Licence"} {result.licence.number} · {result.licence.status ?? "status unknown"}
             </p>
             <p className="mt-1 text-slate-tac">Expires {result.licence.expires ?? "—"}</p>
+            {result.licence.source === "lumiritin_records" && (
+              <p className="mt-1 text-xs text-slate-tac">
+                From Lumiritin records
+                {result.licence.lastVerified ? `, last SACAA-verified ${new Date(result.licence.lastVerified).toLocaleDateString("en-ZA")}` : ""}.
+              </p>
+            )}
             {result.licence.ratings.length > 0 && (
               <ul className="mt-2 flex flex-wrap gap-2">
                 {result.licence.ratings.map((r) => (
@@ -161,6 +193,23 @@ function PilotLookup() {
                 ))}
               </ul>
             )}
+          </div>
+        )}
+
+        {result?.platform && (
+          <div className="mt-4 rounded-2xl border border-gold/30 bg-gold/5 p-4">
+            <div className="flex items-center gap-4">
+              <ReputationRing score={result.platform.score} tier={result.platform.tier} size={56} />
+              <div>
+                <p className="flex items-center gap-2 font-medium text-gold-light">
+                  Lumiritin standing <TierBadge tier={result.platform.tier} />
+                </p>
+                <p className="mt-1 text-xs text-slate-tac">
+                  {result.platform.dutiesCompleted} duties flown · {result.platform.totalHours.toLocaleString("en-ZA")} hrs ·{" "}
+                  {result.platform.verifiedCredentials} verified credential{result.platform.verifiedCredentials === 1 ? "" : "s"}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

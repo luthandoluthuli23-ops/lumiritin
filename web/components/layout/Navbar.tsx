@@ -31,6 +31,7 @@ const LINKS: Record<Role, NavLink[]> = {
   ],
   PILOT: [
     { href: "/wallet", label: "Credential Wallet" },
+    { href: "/wallet/insights", label: "My Reputation" },
     { href: "/wallet/logbook", label: "Logbook" },
   ],
 };

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AvailabilityPanel } from "@/components/pilot/AvailabilityPanel";
 import { CalendarSync } from "@/components/pilot/CalendarSync";
 import { RosterAndPings } from "@/components/pilot/RosterAndPings";
@@ -62,6 +63,7 @@ export default async function WalletPage() {
           Home airfield: {person.homeAirfieldIcao ?? "—"} · Travel radius:{" "}
           {person.travelRadiusKm ? `${person.travelRadiusKm} km` : "—"}
         </p>
+        <p><Link href="/wallet/insights" className="text-gold-light underline underline-offset-4">View my reputation →</Link></p>
       </div>
 
       <div className="my-8 space-y-6">

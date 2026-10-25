@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { aircraftClass } from "@/lib/charter";
 import { db } from "@/lib/db";
-import { formatWindow, formatZar } from "@/lib/empty-legs-shared";
+import { formatZar } from "@/lib/empty-legs-shared";
+import { operatorRoster } from "@/lib/insights";
 import { requireOperator } from "@/lib/session";
-import { primaryBtn, ghostBtn } from "@/components/ui/Field";
+import { primaryBtn } from "@/components/ui/Field";
 import { StatCards } from "@/components/operator/StatCards";
+import { ReputationMini } from "@/components/insights/Reputation";
 
 export const metadata: Metadata = { title: "Operator dashboard — Lumiritin" };
 
@@ -17,38 +19,31 @@ export default async function OperatorDashboard() {
   const { operatorId, operatorName } = await requireOperator();
   const now = new Date();
 
-  const [fleet, inquiries, inquiryCount, legs, activeLegs, crewOpen] = await Promise.all([
+  const [fleet, inquiries, inquiryCount, rosterCount, crewOpen, roster] = await Promise.all([
     db.aircraft.count({ where: { operatorId } }),
     db.charterBooking.findMany({ where: { status: "REQUESTED" }, orderBy: { createdAt: "desc" }, take: 5 }),
     db.charterBooking.count({ where: { status: "REQUESTED" } }),
-    db.emptyLeg.findMany({
-      where: { operatorId, status: "OPEN", departureEnd: { gte: now } },
-      orderBy: { departureStart: "asc" },
-      take: 5,
-      include: { aircraft: { select: { registration: true } }, bookings: { where: { status: { in: ["PENDING", "CONFIRMED"] } }, select: { seats: true } } },
-    }),
-    db.emptyLeg.count({ where: { operatorId, status: "OPEN", departureEnd: { gte: now } } }),
+    db.crewRoster.count({ where: { operatorId } }),
     db.crewRequest.count({ where: { operatorId, status: "OPEN", endsAt: { gte: now } } }),
+    operatorRoster(operatorId),
   ]);
+  const topCrew = roster.slice(0, 3);
 
   return (
     <div className="space-y-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-5xl text-ivory">Good day, {operatorName}</h1>
-          <p className="mt-2 text-slate-tac">Your fleet, marketplace listings and crew needs at a glance.</p>
+          <p className="mt-2 text-slate-tac">Your fleet, crew and charter demand at a glance.</p>
         </div>
-        <div className="flex gap-3">
-          <Link href="/operator/empty-legs/new" className={primaryBtn}>Publish empty leg</Link>
-          <Link href="/operator/crewing/new" className={ghostBtn}>Post crew request</Link>
-        </div>
+        <Link href="/operator/crewing/new" className={primaryBtn}>Post crew request</Link>
       </header>
 
       <StatCards
         stats={[
           { label: "Active fleet", value: fleet, href: "/operator/fleet" },
           { label: "Pending charter inquiries", value: inquiryCount, href: null, note: "open to all operators" },
-          { label: "Active empty legs", value: activeLegs, href: "/operator/empty-legs/new" },
+          { label: "Pilots on roster", value: rosterCount, href: "/operator/pilots" },
           { label: "Open crew requests", value: crewOpen, href: "/operator/crewing" },
         ]}
       />
@@ -77,23 +72,22 @@ export default async function OperatorDashboard() {
         </section>
 
         <section className="glass rounded-3xl p-6">
-          <h2 className="font-display text-2xl text-ivory">Your upcoming empty legs</h2>
-          {legs.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-tac">Nothing published. Turn a ferry flight into revenue.</p>
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-2xl text-ivory">Your top crew</h2>
+            <Link href="/operator/insights" className="text-sm text-gold-light underline underline-offset-4">Insights →</Link>
+          </div>
+          {topCrew.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-tac">
+              List your pilots to see their reliability and rank them. <Link href="/operator/pilots" className="text-gold-light underline">Add crew →</Link>
+            </p>
           ) : (
             <ul className="mt-4 divide-y divide-white/10">
-              {legs.map((l) => {
-                const left = l.seatsOffered - l.bookings.reduce((s, b) => s + b.seats, 0);
-                return (
-                  <li key={l.id} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                    <div>
-                      <p className="text-ivory">{l.originIcao} → {l.destinationIcao} <span className="text-slate-tac">· {l.aircraft.registration}</span></p>
-                      <p className="text-xs text-slate-tac">{formatWindow(l.departureStart.toISOString(), l.departureEnd.toISOString())}</p>
-                    </div>
-                    <span className="whitespace-nowrap text-emerald-status">{left}/{l.seatsOffered} seats</span>
-                  </li>
-                );
-              })}
+              {topCrew.map((p) => (
+                <li key={p.personId} className="flex items-center justify-between gap-4 py-3 text-sm">
+                  <span className="text-ivory">{p.fullName}</span>
+                  <ReputationMini reputation={p.reputation} />
+                </li>
+              ))}
             </ul>
           )}
         </section>
