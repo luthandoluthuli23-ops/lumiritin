@@ -10,12 +10,11 @@ interface Metric {
   label: string;
 }
 
-// `activeEmptyLegs` is live from the database. The other two are product targets / policy, not measurements:
-// replace them with real numbers (verified-crew ratio from verification_log, dispatch time from request timestamps)
-// before launch.
-export function MetricCounters({ activeEmptyLegs }: { activeEmptyLegs: number }) {
+// These are product targets / policy, not live measurements: replace with real numbers (verified-crew
+// ratio from verification_log, dispatch time from request timestamps) before launch.
+export function MetricCounters() {
   const metrics: Metric[] = [
-    { to: activeEmptyLegs, label: "Active empty legs" },
+    { to: 7, label: "Airfields served" },
     { to: 100, suffix: "%", label: "SACAA-verified crew" },
     { to: 2, prefix: "< ", suffix: " hr", label: "Dispatch time" },
   ];

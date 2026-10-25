@@ -7,15 +7,15 @@ import { flightCardVariant, jetCardHover, staggerContainer, trackSpotlight } fro
 const PORTALS = [
   {
     eyebrow: "Passengers",
-    title: "Fly private for less",
-    body: "Search charter and grab empty-leg seats at up to 75% off. Request in under a minute.",
-    cta: "Browse empty legs",
-    href: "/empty-legs",
+    title: "Fly private, on demand",
+    body: "Charter a helicopter anywhere in South Africa and get an instant estimate. Request in under a minute.",
+    cta: "Request a charter quote",
+    href: "/charter",
   },
   {
     eyebrow: "Operators",
     title: "Fill every sector",
-    body: "Publish repositioning flights, manage your fleet and post urgent crew requests.",
+    body: "Manage your fleet, post urgent crew requests and match SACAA-verified pilots in minutes.",
     cta: "Open operator portal",
     href: "/operator/dashboard",
   },

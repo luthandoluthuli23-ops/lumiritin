@@ -66,11 +66,11 @@ enum TripType {
 }
 
 enum AircraftClass {
-  VERY_LIGHT_JET
-  LIGHT_JET
-  MIDSIZE_JET
-  HEAVY_JET
-  TURBOPROP
+  LIGHT_HELI
+  MEDIUM_HELI
+  HEAVY_HELI
+  SUPER_HELI
+  UTILITY_HELI
 }
 
 enum CharterStatus {

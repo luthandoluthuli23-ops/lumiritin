@@ -13,7 +13,6 @@ interface NavLink {
 }
 
 const PUBLIC_LINKS: NavLink[] = [
-  { href: "/empty-legs", label: "Empty Legs" },
   { href: "/charter", label: "Charter" },
   { href: "/auth/signup?role=operator", label: "For Operators" },
   { href: "/auth/signup?role=pilot", label: "For Pilots" },
@@ -21,7 +20,6 @@ const PUBLIC_LINKS: NavLink[] = [
 
 const LINKS: Record<Role, NavLink[]> = {
   PASSENGER: [
-    { href: "/empty-legs", label: "Empty Legs" },
     { href: "/charter", label: "Charter" },
     { href: "/dashboard/bookings", label: "My Bookings" },
   ],
@@ -30,18 +28,16 @@ const LINKS: Record<Role, NavLink[]> = {
     { href: "/operator/fleet", label: "Fleet" },
     { href: "/operator/crewing", label: "Crewing" },
     { href: "/operator/bench", label: "Bench" },
-    { href: "/empty-legs", label: "Marketplace" },
   ],
   PILOT: [
     { href: "/wallet", label: "Credential Wallet" },
     { href: "/wallet/logbook", label: "Logbook" },
-    { href: "/empty-legs", label: "Empty Legs" },
   ],
 };
 
 const CTA: Record<Role, NavLink> = {
   PASSENGER: { href: "/charter", label: "Request charter" },
-  OPERATOR: { href: "/operator/empty-legs/new", label: "Publish empty leg" },
+  OPERATOR: { href: "/operator/crewing/new", label: "Post crew request" },
   PILOT: { href: "/wallet", label: "Check credentials" },
 };
 
@@ -120,7 +116,9 @@ export function Navbar({ session, demoSwitcher }: Props) {
         <AnimatePresence>
           {open && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1, transition: { duration: 0.3, ease: EASE_LUXE } }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden lg:hidden">
-              <div className="space-y-1 border-t border-white/10 p-4">
+              {/* Solid background: the header is fixed over page content, so a translucent menu let the
+                  hero text show through and the links looked overlapped/unreadable. */}
+              <div className="space-y-1 rounded-b-3xl border-t border-white/10 bg-obsidian p-4">
                 {session && <p className="px-3 pb-2 text-xs text-slate-tac">{session.name} · {ROLE_LABEL[session.role]}</p>}
                 {links.map((l) => (
                   <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2.5 text-ivory hover:bg-white/5">{l.label}</Link>

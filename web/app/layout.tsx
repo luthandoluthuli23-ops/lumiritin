@@ -11,7 +11,7 @@ const sans = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Lumiritin — Private aviation, South Africa",
-  description: "Private jet charter, empty-leg deals and SACAA-verified crew credentials.",
+  description: "Private helicopter charter and SACAA-verified crew credentials across South Africa.",
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

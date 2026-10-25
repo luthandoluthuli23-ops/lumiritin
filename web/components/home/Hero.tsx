@@ -76,14 +76,14 @@ export function Hero() {
           </span>
         </h1>
         <p data-hero-fade className="mt-6 max-w-xl text-lg text-slate-tac">
-          Charter a jet, take an empty leg for up to 75% off, or find SACAA-verified crew. One platform for passengers, operators and pilots.
+          Charter a helicopter across South Africa, or find SACAA-verified crew. One platform for passengers, operators and pilots.
         </p>
         <div data-hero-fade className="mt-9 flex flex-wrap gap-4">
-          <Link href="/empty-legs" className="rounded-full bg-gold px-7 py-3.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light">
-            Browse empty legs
-          </Link>
-          <Link href="/charter" className="rounded-full border border-white/20 px-7 py-3.5 text-sm font-semibold text-ivory transition hover:border-gold/60">
+          <Link href="/charter" className="rounded-full bg-gold px-7 py-3.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light">
             Request a charter quote
+          </Link>
+          <Link href="/auth/signup" className="rounded-full border border-white/20 px-7 py-3.5 text-sm font-semibold text-ivory transition hover:border-gold/60">
+            Join as operator or pilot
           </Link>
         </div>
       </div>

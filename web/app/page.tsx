@@ -2,14 +2,8 @@ import { Hero } from "@/components/home/Hero";
 import { MetricCounters } from "@/components/home/MetricCounters";
 import { PortalCtas } from "@/components/home/PortalCtas";
 import { SearchTabs } from "@/components/home/SearchTabs";
-import { countOpenEmptyLegs } from "@/lib/empty-legs";
 
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  // The landing page must still load if the database is briefly unavailable: show 0 rather than a 500.
-  const activeEmptyLegs = await countOpenEmptyLegs().catch(() => 0);
-
+export default function Home() {
   return (
     <main>
       <Hero />
@@ -19,7 +13,7 @@ export default async function Home() {
       </section>
 
       <section className="px-6 py-20">
-        <MetricCounters activeEmptyLegs={activeEmptyLegs} />
+        <MetricCounters />
       </section>
 
       <section className="px-6 pb-28">

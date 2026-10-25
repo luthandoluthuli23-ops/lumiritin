@@ -19,7 +19,7 @@ const leg = z.object({
 
 const schema = z.object({
   tripType: z.enum(["ONE_WAY", "ROUND_TRIP", "MULTI_LEG"]),
-  aircraftClass: z.enum(["VERY_LIGHT_JET", "LIGHT_JET", "MIDSIZE_JET", "HEAVY_JET", "TURBOPROP"]),
+  aircraftClass: z.enum(["LIGHT_HELI", "MEDIUM_HELI", "HEAVY_HELI"]),
   passengers: z.number().int().min(1).max(20),
   legs: z.array(leg).min(1).max(MAX_MULTI_LEGS),
   contactName: z.string().trim().min(2).max(120),

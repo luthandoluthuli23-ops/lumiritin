@@ -44,7 +44,7 @@ export function CharterConfigurator({ airfields, today, initial, contact }: Prop
   const [stops, setStops] = useState<Stop[]>([{ to: initial.to, date: initial.date }]);
   const [returnDate, setReturnDate] = useState("");
   const [pax, setPax] = useState(initial.pax);
-  const [classId, setClassId] = useState<AircraftClassId>("LIGHT_JET");
+  const [classId, setClassId] = useState<AircraftClassId>("MEDIUM_HELI");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState<{ reference: string; priceZar: number } | null>(null);

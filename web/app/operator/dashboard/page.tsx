@@ -9,8 +9,8 @@ import { StatCards } from "@/components/operator/StatCards";
 
 export const metadata: Metadata = { title: "Operator dashboard — Lumiritin" };
 
-const CLASS_LABEL = Object.fromEntries(
-  ["VERY_LIGHT_JET", "LIGHT_JET", "MIDSIZE_JET", "HEAVY_JET", "TURBOPROP"].map((id) => [id, aircraftClass(id)!.label]),
+const CLASS_LABEL: Record<string, string> = Object.fromEntries(
+  ["LIGHT_HELI", "MEDIUM_HELI", "HEAVY_HELI"].map((id) => [id, aircraftClass(id)!.label]),
 );
 
 export default async function OperatorDashboard() {
@@ -66,7 +66,7 @@ export default async function OperatorDashboard() {
                   <li key={b.id} className="flex items-baseline justify-between gap-4 py-3 text-sm">
                     <div>
                       <p className="text-ivory">{route.map((l) => `${l.fromIcao}→${l.toIcao}`).join(" · ")}</p>
-                      <p className="text-xs text-slate-tac">{b.reference} · {CLASS_LABEL[b.aircraftClass]} · {b.passengers} pax · {route[0]?.date}</p>
+                      <p className="text-xs text-slate-tac">{b.reference} · {CLASS_LABEL[b.aircraftClass] ?? b.aircraftClass} · {b.passengers} pax · {route[0]?.date}</p>
                     </div>
                     <span className="whitespace-nowrap text-gold-light">≈ {formatZar(b.estimatedPriceZar)}</span>
                   </li>

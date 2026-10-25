@@ -7,7 +7,6 @@ import { AIRFIELDS } from "@/lib/airfields";
 import { EASE_LUXE } from "@/lib/animations";
 
 const TABS = [
-  { id: "empty", label: "Empty Leg Deals" },
   { id: "charter", label: "Custom Charter Quote" },
   { id: "pilot", label: "Pilot Credential Lookup" },
 ] as const;
@@ -18,7 +17,7 @@ const inputCls =
 const submitCls = "self-end rounded-xl bg-gold px-7 py-3 text-sm font-semibold text-obsidian transition hover:bg-gold-light disabled:opacity-60";
 
 export function SearchTabs() {
-  const [tab, setTab] = useState<TabId>("empty");
+  const [tab, setTab] = useState<TabId>("charter");
 
   return (
     <div className="glass mx-auto w-full max-w-5xl rounded-3xl p-3 shadow-gold sm:p-4">
@@ -53,7 +52,6 @@ export function SearchTabs() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.25 }}
           >
-            {tab === "empty" && <RouteForm mode="empty" />}
             {tab === "charter" && <RouteForm mode="charter" />}
             {tab === "pilot" && <PilotLookup />}
           </motion.div>
