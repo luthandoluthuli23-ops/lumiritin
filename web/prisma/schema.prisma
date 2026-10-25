@@ -71,6 +71,11 @@ enum AircraftClass {
   HEAVY_HELI
   SUPER_HELI
   UTILITY_HELI
+  // Fixed-wing — present in the model but hidden in the charter UI until fixed-wing launches.
+  TURBOPROP
+  LIGHT_JET
+  MIDSIZE_JET
+  HEAVY_JET
 }
 
 enum CharterStatus {
@@ -135,6 +140,8 @@ model Person {
   role             CrewRole  @default(PILOT)
   homeAirfieldIcao String? // e.g. FALA
   travelRadiusKm   Int?
+  // Specialised competencies (codes from lib/proficiencies.ts), e.g. SLING, NVG, MOUNTAIN.
+  proficiencies    String[]  @default([])
   // External calendar (iCal) used to block out non-app flying. The URL can contain a secret token:
   // never log it or return it to a client.
   icalUrl          String?

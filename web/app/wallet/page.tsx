@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AvailabilityPanel } from "@/components/pilot/AvailabilityPanel";
 import { CalendarSync } from "@/components/pilot/CalendarSync";
+import { ProficienciesPanel } from "@/components/pilot/ProficienciesPanel";
 import { RosterAndPings } from "@/components/pilot/RosterAndPings";
 import { currentState, describeState } from "@/lib/availability";
 import { db } from "@/lib/db";
@@ -79,6 +80,7 @@ export default async function WalletPage() {
           }))}
         />
         <AvailabilityPanel state={state.state} label={describeState(state)} reason={state.reason} />
+        <ProficienciesPanel initial={person.proficiencies} />
         <CalendarSync connected={connected} host={icalHost} syncedAt={person.icalSyncedAt?.toISOString() ?? null} lastError={person.icalLastError} blockedPeriods={blockedPeriods} />
       </div>
 

@@ -15,7 +15,7 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-4">
         <div className="md:col-span-1">
           <p className="font-display text-3xl text-gold-light">Lumiritin</p>
-          <p className="mt-3 text-sm text-slate-tac">Private helicopter charter for South Africa, with SACAA-verified crew.</p>
+          <p className="mt-3 text-sm text-slate-tac">Private aircraft charter for South Africa, with SACAA-verified crew.</p>
         </div>
 
         <nav aria-label="Airfields">

@@ -8,7 +8,7 @@ import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Custom Charter — Lumiritin",
-  description: "Configure a private helicopter charter and get an instant estimate in rand.",
+  description: "Configure a private charter and get an instant estimate in rand.",
 };
 export const dynamic = "force-dynamic";
 

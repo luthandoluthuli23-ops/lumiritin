@@ -8,7 +8,7 @@ const PORTALS = [
   {
     eyebrow: "Passengers",
     title: "Fly private, on demand",
-    body: "Charter a helicopter anywhere in South Africa and get an instant estimate. Request in under a minute.",
+    body: "Charter an aircraft anywhere in South Africa and get an instant estimate. Request in under a minute.",
     cta: "Request a charter quote",
     href: "/charter",
   },

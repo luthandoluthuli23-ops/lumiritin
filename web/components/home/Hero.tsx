@@ -76,7 +76,7 @@ export function Hero() {
           </span>
         </h1>
         <p data-hero-fade className="mt-6 max-w-xl text-lg text-slate-tac">
-          Charter a helicopter across South Africa, or find SACAA-verified crew. One platform for passengers, operators and pilots.
+          Charter an aircraft across South Africa, or find SACAA-verified crew. One platform for passengers, operators and pilots.
         </p>
         <div data-hero-fade className="mt-9 flex flex-wrap gap-4">
           <Link href="/charter" className="rounded-full bg-gold px-7 py-3.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light">

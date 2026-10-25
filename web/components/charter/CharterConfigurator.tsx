@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { flightCardVariant, jetCardHover, staggerContainer, trackSpotlight } from "@/lib/animations";
-import { AIRCRAFT_CLASSES, MAX_MULTI_LEGS, computeQuote, legDistanceNm, type AircraftClassId, type AircraftClassSpec, type QuoteResult } from "@/lib/charter";
+import { VISIBLE_AIRCRAFT_CLASSES, MAX_MULTI_LEGS, computeQuote, legDistanceNm, type AircraftClassId, type AircraftClassSpec, type QuoteResult } from "@/lib/charter";
 import { formatZar } from "@/lib/empty-legs-shared";
 import type { AirfieldOption } from "@/lib/geo";
 import { AirfieldAutocomplete } from "./AirfieldAutocomplete";
@@ -66,11 +66,11 @@ export function CharterConfigurator({ airfields, today, initial, contact }: Prop
   );
   const results = useMemo(() => {
     const m = new Map<AircraftClassId, QuoteResult | null>();
-    for (const c of AIRCRAFT_CLASSES) m.set(c.id, distances ? computeQuote(distances, c, pax) : null);
+    for (const c of VISIBLE_AIRCRAFT_CLASSES) m.set(c.id, distances ? computeQuote(distances, c, pax) : null);
     return m;
   }, [distances, pax]);
 
-  const spec = AIRCRAFT_CLASSES.find((c) => c.id === classId)!;
+  const spec = VISIBLE_AIRCRAFT_CLASSES.find((c) => c.id === classId)!;
   const current = results.get(classId) ?? null;
 
   function changeTrip(t: TripType) {
@@ -210,7 +210,7 @@ export function CharterConfigurator({ airfields, today, initial, contact }: Prop
         <section aria-labelledby="s-class">
           <h2 id="s-class" className="mb-4 font-display text-3xl text-ivory"><span className="text-gold">02</span> Aircraft class</h2>
           <motion.div variants={container} initial="hidden" animate="show" role="radiogroup" aria-label="Aircraft class" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {AIRCRAFT_CLASSES.map((c) => (
+            {VISIBLE_AIRCRAFT_CLASSES.map((c) => (
               <ClassCard key={c.id} spec={c} selected={classId === c.id} result={results.get(c.id) ?? null} pax={pax} onSelect={() => setClassId(c.id)} />
             ))}
           </motion.div>

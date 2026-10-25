@@ -2,7 +2,14 @@
 // API re-runs it server-side, so a client can never choose its own price.
 import { distanceNm, type Coordinates } from "@/lib/geo";
 
-export type AircraftClassId = "LIGHT_HELI" | "MEDIUM_HELI" | "HEAVY_HELI";
+export type AircraftClassId =
+  | "LIGHT_HELI"
+  | "MEDIUM_HELI"
+  | "HEAVY_HELI"
+  | "TURBOPROP"
+  | "LIGHT_JET"
+  | "MIDSIZE_JET"
+  | "HEAVY_JET";
 
 export interface AircraftClassSpec {
   id: AircraftClassId;
@@ -16,14 +23,25 @@ export interface AircraftClassSpec {
    * (Aircraft.hourlyRateZar) before showing quotes to real customers.
    */
   hourlyRateZar: number;
+  /** Fixed-wing classes are in the model but hidden in the charter UI until fixed-wing launches. */
+  hidden?: boolean;
 }
 
-// Pax / cruise / range are typical figures for the class of helicopter, not for any one aircraft.
+// Pax / cruise / range are typical figures for the class, not for any one aircraft.
+// Helicopters are the live offering; fixed-wing is present but hidden (see VISIBLE_AIRCRAFT_CLASSES).
 export const AIRCRAFT_CLASSES: readonly AircraftClassSpec[] = [
   { id: "LIGHT_HELI", label: "Light Helicopter", examples: "Airbus H125, Robinson R66", maxPax: 5, cruiseKts: 120, rangeNm: 340, hourlyRateZar: 20_000 },
   { id: "MEDIUM_HELI", label: "Medium Helicopter", examples: "Airbus H145, Bell 429", maxPax: 8, cruiseKts: 135, rangeNm: 400, hourlyRateZar: 35_000 },
   { id: "HEAVY_HELI", label: "Heavy Helicopter", examples: "Leonardo AW139, Airbus H175", maxPax: 12, cruiseKts: 150, rangeNm: 480, hourlyRateZar: 60_000 },
+  { id: "TURBOPROP", label: "Turboprop", examples: "Pilatus PC-12, King Air 350", maxPax: 8, cruiseKts: 270, rangeNm: 1500, hourlyRateZar: 25_000, hidden: true },
+  { id: "LIGHT_JET", label: "Light Jet", examples: "Citation CJ3, Phenom 300", maxPax: 7, cruiseKts: 420, rangeNm: 1800, hourlyRateZar: 40_000, hidden: true },
+  { id: "MIDSIZE_JET", label: "Midsize Jet", examples: "Citation Latitude, Learjet 60", maxPax: 8, cruiseKts: 440, rangeNm: 2500, hourlyRateZar: 55_000, hidden: true },
+  { id: "HEAVY_JET", label: "Heavy Jet", examples: "Gulfstream G450, Falcon 900", maxPax: 13, cruiseKts: 480, rangeNm: 4000, hourlyRateZar: 90_000, hidden: true },
 ];
+
+/** Classes shown to customers right now (helicopters). Flip `hidden` in AIRCRAFT_CLASSES to launch fixed-wing. */
+export const VISIBLE_AIRCRAFT_CLASSES: readonly AircraftClassSpec[] = AIRCRAFT_CLASSES.filter((c) => !c.hidden);
+export const VISIBLE_CLASS_IDS = VISIBLE_AIRCRAFT_CLASSES.map((c) => c.id) as [AircraftClassId, ...AircraftClassId[]];
 
 export const aircraftClass = (id: string): AircraftClassSpec | undefined => AIRCRAFT_CLASSES.find((c) => c.id === id);
 
