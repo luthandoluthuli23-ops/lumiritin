@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PROFICIENCIES, PROFICIENCY_GROUPS, PROFICIENCY_LABEL } from "@/lib/proficiencies";
+import { COMPETENCIES, COMPETENCY_GROUPS, COMPETENCY_LABEL } from "@/lib/competencies";
 
-export function ProficienciesPanel({ initial }: { initial: string[] }) {
+export function CompetenciesPanel({ initial }: { initial: string[] }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(initial);
   const [editing, setEditing] = useState(false);
@@ -15,10 +15,10 @@ export function ProficienciesPanel({ initial }: { initial: string[] }) {
   async function save() {
     setBusy(true);
     try {
-      const res = await fetch("/api/pilot/proficiencies", {
+      const res = await fetch("/api/pilot/competencies", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proficiencies: selected }),
+        body: JSON.stringify({ competencies: selected }),
       });
       if (res.ok) {
         setEditing(false);
@@ -32,7 +32,7 @@ export function ProficienciesPanel({ initial }: { initial: string[] }) {
   return (
     <section className="glass rounded-3xl p-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl text-ivory">Proficiencies</h2>
+        <h2 className="font-display text-2xl text-ivory">Competencies</h2>
         {!editing ? (
           <button type="button" onClick={() => setEditing(true)} className="rounded-full border border-white/20 px-4 py-1.5 text-sm text-ivory transition hover:border-gold/60">
             Edit
@@ -52,31 +52,31 @@ export function ProficienciesPanel({ initial }: { initial: string[] }) {
 
       {!editing ? (
         selected.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-tac">None added yet. Tap Edit to list your sling, night, NVG, offshore and other proficiencies.</p>
+          <p className="mt-4 text-sm text-slate-tac">None added yet. Tap Edit to list your sling, night, NVG, offshore and other competencies.</p>
         ) : (
           <ul className="mt-4 flex flex-wrap gap-2">
             {selected.map((code) => (
-              <li key={code} className="rounded-full bg-gold/15 px-3 py-1 text-sm text-gold-light">{PROFICIENCY_LABEL[code] ?? code}</li>
+              <li key={code} className="rounded-full bg-gold/15 px-3 py-1 text-sm text-gold-light">{COMPETENCY_LABEL[code] ?? code}</li>
             ))}
           </ul>
         )
       ) : (
         <div className="mt-4 space-y-5">
-          {PROFICIENCY_GROUPS.map((group) => (
+          {COMPETENCY_GROUPS.map((group) => (
             <div key={group}>
               <p className="text-xs uppercase tracking-[0.2em] text-gold">{group}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {PROFICIENCIES.filter((p) => p.group === group).map((p) => {
-                  const on = selected.includes(p.code);
+                {COMPETENCIES.filter((c) => c.group === group).map((c) => {
+                  const on = selected.includes(c.code);
                   return (
                     <button
-                      key={p.code}
+                      key={c.code}
                       type="button"
-                      onClick={() => toggle(p.code)}
+                      onClick={() => toggle(c.code)}
                       aria-pressed={on}
                       className={`rounded-full px-3 py-1.5 text-sm transition ${on ? "bg-gold text-obsidian" : "border border-white/20 text-slate-tac hover:text-ivory"}`}
                     >
-                      {p.label}
+                      {c.label}
                     </button>
                   );
                 })}

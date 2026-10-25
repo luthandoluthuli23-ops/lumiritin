@@ -1,12 +1,12 @@
-// Specialised helicopter-pilot proficiencies (SACAA Part 61 ratings/endorsements and common
-// operational competencies operators hire for). Stored as codes on Person.proficiencies.
-export interface Proficiency {
+// Specialised helicopter-pilot competencies (SACAA Part 61 ratings/endorsements and common
+// operational competencies operators hire for). Stored as codes on Person.competencies.
+export interface Competency {
   code: string;
   label: string;
   group: "Core ratings" | "Specialised operations" | "Environment" | "Instruction";
 }
 
-export const PROFICIENCIES: readonly Proficiency[] = [
+export const COMPETENCIES: readonly Competency[] = [
   { code: "NIGHT", label: "Night rating", group: "Core ratings" },
   { code: "IF", label: "Instrument (IFR)", group: "Core ratings" },
   { code: "NVG", label: "Night vision goggles (NVG)", group: "Core ratings" },
@@ -26,6 +26,6 @@ export const PROFICIENCIES: readonly Proficiency[] = [
   { code: "TESTPILOT", label: "Test pilot", group: "Instruction" },
 ];
 
-export const PROFICIENCY_LABEL: Record<string, string> = Object.fromEntries(PROFICIENCIES.map((p) => [p.code, p.label]));
-export const PROFICIENCY_CODES = PROFICIENCIES.map((p) => p.code) as [string, ...string[]];
-export const PROFICIENCY_GROUPS = ["Core ratings", "Specialised operations", "Environment", "Instruction"] as const;
+export const COMPETENCY_LABEL: Record<string, string> = Object.fromEntries(COMPETENCIES.map((c) => [c.code, c.label]));
+export const COMPETENCY_CODES = COMPETENCIES.map((c) => c.code) as [string, ...string[]];
+export const COMPETENCY_GROUPS = ["Core ratings", "Specialised operations", "Environment", "Instruction"] as const;

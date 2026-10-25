@@ -140,8 +140,8 @@ model Person {
   role             CrewRole  @default(PILOT)
   homeAirfieldIcao String? // e.g. FALA
   travelRadiusKm   Int?
-  // Specialised competencies (codes from lib/proficiencies.ts), e.g. SLING, NVG, MOUNTAIN.
-  proficiencies    String[]  @default([])
+  // Specialised competencies (codes from lib/competencies.ts), e.g. SLING, NVG, MOUNTAIN.
+  competencies     String[]  @default([])
   // External calendar (iCal) used to block out non-app flying. The URL can contain a secret token:
   // never log it or return it to a client.
   icalUrl          String?
@@ -159,6 +159,7 @@ model Person {
   user          User?
   rosterEntries CrewRoster[]
   pings         CrewPing[]
+  checkRecords  CheckRecord[]
 
   @@map("person")
 }
@@ -213,6 +214,24 @@ model Medical {
 
   @@unique([personId, class])
   @@map("medical")
+}
+
+// A recurrent proficiency/licence check (PPC, OPC, IR revalidation, line check...). Status is
+// derived from expiresAt at read time (see lib/checks.ts), never stored, so it is always current.
+model CheckRecord {
+  id           String   @id @default(cuid())
+  personId     String
+  checkType    String // code from lib/checks.ts, e.g. "PPC", "IR", "LINE"
+  aircraftType String // ICAO type designator or model, e.g. "H125"
+  completedAt  DateTime @db.Date
+  examiner     String // Designated Flight Examiner (DFE)
+  expiresAt    DateTime @db.Date
+  createdAt    DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@map("check_record")
 }
 
 model LogbookSummary {

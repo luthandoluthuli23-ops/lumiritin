@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AvailabilityPanel } from "@/components/pilot/AvailabilityPanel";
 import { CalendarSync } from "@/components/pilot/CalendarSync";
-import { ProficienciesPanel } from "@/components/pilot/ProficienciesPanel";
+import { CheckRecordsPanel } from "@/components/pilot/CheckRecordsPanel";
+import { CompetenciesPanel } from "@/components/pilot/CompetenciesPanel";
 import { RosterAndPings } from "@/components/pilot/RosterAndPings";
 import { currentState, describeState } from "@/lib/availability";
 import { db } from "@/lib/db";
@@ -21,6 +22,7 @@ async function currentPerson() {
       logbook: true,
       availability: { where: { endsAt: { gt: new Date(Date.now() - 86_400_000) } } },
       rosterEntries: { include: { operator: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+      checkRecords: { orderBy: { expiresAt: "asc" } },
       pings: {
         where: { status: "PENDING", expiresAt: { gt: new Date() } },
         include: { crewRequest: { include: { operator: { select: { name: true } } } } },
@@ -80,7 +82,17 @@ export default async function WalletPage() {
           }))}
         />
         <AvailabilityPanel state={state.state} label={describeState(state)} reason={state.reason} />
-        <ProficienciesPanel initial={person.proficiencies} />
+        <CompetenciesPanel initial={person.competencies} />
+        <CheckRecordsPanel
+          records={person.checkRecords.map((r) => ({
+            id: r.id,
+            checkType: r.checkType,
+            aircraftType: r.aircraftType,
+            completedAt: r.completedAt.toISOString(),
+            examiner: r.examiner,
+            expiresAt: r.expiresAt.toISOString(),
+          }))}
+        />
         <CalendarSync connected={connected} host={icalHost} syncedAt={person.icalSyncedAt?.toISOString() ?? null} lastError={person.icalLastError} blockedPeriods={blockedPeriods} />
       </div>
 
