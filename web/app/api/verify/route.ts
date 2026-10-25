@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { pilotReputation } from "@/lib/insights";
-import { runVerifier } from "@/lib/verifier";
+import { fetchSacaaLicence } from "@/lib/sacaa";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +45,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": "60" } });
   }
 
-  // Live portal check and our own records, in parallel.
+  // Live SACAA check and our own records, in parallel.
   const [result, cred] = await Promise.all([
-    runVerifier(licence).catch(() => ({ outcome: "PORTAL_ERROR" as const, record: null, error: "verifier_unavailable" })),
+    fetchSacaaLicence(licence),
     db.credential.findFirst({
       where: { licenceNumber: licence },
       select: {
