@@ -83,7 +83,7 @@ export function Navbar({ session, demoSwitcher }: Props) {
 
   return (
     <header className="fixed inset-x-0 top-4 z-40 px-4">
-      <div className="glass mx-auto max-w-7xl rounded-3xl bg-glass/80 shadow-lg shadow-black/30">
+      <div className="glass mx-auto max-w-7xl rounded-3xl bg-glass/95 shadow-lg shadow-black/30">
         <div className="flex h-14 items-center justify-between gap-4 pl-6 pr-3">
           <Link href="/" className="font-display text-2xl font-semibold tracking-wide text-gold-light">Lumiritin</Link>
 
