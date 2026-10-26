@@ -4,6 +4,7 @@ import { CalendarSync } from "@/components/pilot/CalendarSync";
 import { CheckRecordsPanel } from "@/components/pilot/CheckRecordsPanel";
 import { CompetenciesPanel } from "@/components/pilot/CompetenciesPanel";
 import { RosterAndPings } from "@/components/pilot/RosterAndPings";
+import { VerifyLicenceButton } from "@/components/pilot/VerifyLicenceButton";
 import { currentState, describeState } from "@/lib/availability";
 import { db } from "@/lib/db";
 import { formatWindow } from "@/lib/empty-legs-shared";
@@ -107,6 +108,13 @@ export default async function WalletPage() {
             Status: {c.portalStatus ?? "unverified"} · Expires {fmt(c.expiresAt)} ({daysLeft(c.expiresAt)}) · Last
             checked {c.lastVerifiedAt ? c.lastVerifiedAt.toLocaleString("en-ZA") : "never"}
           </p>
+          {c.type === "PILOT_LICENCE" && (
+            <VerifyLicenceButton
+              lastResult={c.lastVerificationResult}
+              lastVerifiedAt={c.lastVerifiedAt ? c.lastVerifiedAt.toISOString() : null}
+              autoRun={!c.lastVerifiedAt}
+            />
+          )}
           <table>
             <thead>
               <tr>
