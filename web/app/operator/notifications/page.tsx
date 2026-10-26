@@ -4,6 +4,7 @@ import { isEmailConfigured } from "@/lib/email";
 import { requireOperator } from "@/lib/session";
 import { isWhatsappConfigured } from "@/lib/whatsapp";
 import { NotificationTester } from "@/components/operator/NotificationTester";
+import { RunRemindersButton } from "@/components/operator/RunRemindersButton";
 
 export const metadata: Metadata = { title: "Notifications — Lumiritin" };
 
@@ -38,6 +39,18 @@ export default async function OperatorNotificationsPage() {
       </div>
 
       <NotificationTester defaultEmail={user?.email ?? ""} />
+
+      <section className="glass rounded-3xl p-6">
+        <h2 className="font-display text-2xl text-ivory">Credential expiry reminders</h2>
+        <p className="mt-1 max-w-2xl text-sm text-slate-tac">
+          Pilots are reminded 90, 30 and 7 days before any licence, rating, medical or recurrent check expires — on
+          WhatsApp and email. This runs automatically every morning; the button sends any due reminders right now
+          (already-reminded items are skipped).
+        </p>
+        <div className="mt-4">
+          <RunRemindersButton />
+        </div>
+      </section>
 
       <details className="glass rounded-3xl p-6">
         <summary className="cursor-pointer font-display text-2xl text-ivory">How to switch these on</summary>

@@ -66,6 +66,16 @@ export async function sendCharterConfirmation(p: { to: string; name: string; ref
   await sendEmail({ to: p.to, subject: `Your Lumiritin charter request ${p.reference}`, html });
 }
 
+export async function sendExpiryReminderEmail(p: { to: string; name: string; item: string; expiresOn: string; daysLeft: number }): Promise<{ ok: boolean; error?: string }> {
+  const when = p.daysLeft <= 0 ? "has expired" : `expires in ${p.daysLeft} day${p.daysLeft === 1 ? "" : "s"}`;
+  const html = shell(
+    `<p style="font-size:16px">Hi ${escapeHtml(p.name)},</p>
+     <p>Your <b style="color:#e2b857">${escapeHtml(p.item)}</b> ${when} — on <b>${escapeHtml(p.expiresOn)}</b>.</p>
+     <p>Renew it to stay current and keep receiving duty offers on Lumiritin.</p>`,
+  );
+  return sendEmail({ to: p.to, subject: `Reminder: your ${p.item} ${p.daysLeft <= 0 ? "has expired" : "expires soon"}`, html });
+}
+
 export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
   return sendEmail({
     to,
