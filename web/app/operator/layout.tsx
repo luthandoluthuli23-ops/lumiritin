@@ -8,7 +8,7 @@ export default async function OperatorLayout({ children }: { children: ReactNode
   const operator = await requireOperator();
   return (
     <>
-      <OperatorNav operatorName={operator.operatorName} />
+      <OperatorNav operatorName={operator.operatorName} isPrivate={operator.isPrivate} />
       <main className="px-6 py-10">
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>

@@ -82,7 +82,7 @@ export default async function WalletPage() {
           }))}
         />
         <AvailabilityPanel state={state.state} label={describeState(state)} reason={state.reason} />
-        <CompetenciesPanel initial={person.competencies} />
+        <CompetenciesPanel initial={person.competencies} role={person.role} />
         <CheckRecordsPanel
           records={person.checkRecords.map((r) => ({
             id: r.id,
@@ -101,7 +101,7 @@ export default async function WalletPage() {
       {person.credentials.map((c) => (
         <section key={c.id}>
           <h2>
-            {c.licenceCategory ?? "Licence"} {c.licenceNumber}
+            {c.type === "CABIN_CREW_CERT" ? "Cabin Crew Licence" : c.licenceCategory ?? "Licence"} {c.licenceNumber}
           </h2>
           <p>
             Status: {c.portalStatus ?? "unverified"} · Expires {fmt(c.expiresAt)} ({daysLeft(c.expiresAt)}) · Last

@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { COMPETENCIES, COMPETENCY_GROUPS, COMPETENCY_LABEL } from "@/lib/competencies";
+import { COMPETENCY_LABEL, competenciesForRole, groupsForRole } from "@/lib/competencies";
 
-export function CompetenciesPanel({ initial }: { initial: string[] }) {
+export function CompetenciesPanel({ initial, role = "PILOT" }: { initial: string[]; role?: string }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(initial);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const items = competenciesForRole(role);
+  const groups = groupsForRole(role);
 
   const toggle = (code: string) => setSelected((s) => (s.includes(code) ? s.filter((c) => c !== code) : [...s, code]));
 
@@ -62,11 +64,11 @@ export function CompetenciesPanel({ initial }: { initial: string[] }) {
         )
       ) : (
         <div className="mt-4 space-y-5">
-          {COMPETENCY_GROUPS.map((group) => (
+          {groups.map((group) => (
             <div key={group}>
               <p className="text-xs uppercase tracking-[0.2em] text-gold">{group}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {COMPETENCIES.filter((c) => c.group === group).map((c) => {
+                {items.filter((c) => c.group === group).map((c) => {
                   const on = selected.includes(c.code);
                   return (
                     <button

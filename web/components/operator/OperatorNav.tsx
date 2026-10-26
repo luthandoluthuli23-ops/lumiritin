@@ -13,14 +13,17 @@ const TABS = [
   { href: "/operator/notifications", label: "Notifications" },
 ];
 
-export function OperatorNav({ operatorName }: { operatorName: string }) {
+export function OperatorNav({ operatorName, isPrivate = false }: { operatorName: string; isPrivate?: boolean }) {
   const path = usePathname();
   return (
     <div className="border-b border-white/10 px-6 pt-24">
       <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-4">
         <div className="pb-3">
           <p className="text-xs uppercase tracking-[0.3em] text-gold">Operator portal</p>
-          <p className="font-display text-2xl text-ivory">{operatorName}</p>
+          <p className="flex items-center gap-2 font-display text-2xl text-ivory">
+            {operatorName}
+            {isPrivate && <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-sans text-slate-tac">Private</span>}
+          </p>
         </div>
         <nav aria-label="Operator" className="-mb-px flex gap-1 overflow-x-auto">
           {TABS.map((t) => {

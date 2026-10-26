@@ -40,6 +40,7 @@ export interface OperatorContext {
   operatorId: string;
   operatorName: string;
   baseIcao: string | null;
+  isPrivate: boolean;
 }
 
 /** The signed-in operator admin and their operator, or null (API routes turn this into 401/403). */
@@ -48,10 +49,10 @@ export const getOperatorContext = cache(async (): Promise<OperatorContext | null
   if (session?.role !== "OPERATOR") return null;
   const user = await db.user.findUnique({
     where: { id: session.sub },
-    select: { operatorId: true, operator: { select: { name: true, baseIcao: true } } },
+    select: { operatorId: true, operator: { select: { name: true, baseIcao: true, isPrivate: true } } },
   });
   if (!user?.operatorId || !user.operator) return null;
-  return { userId: session.sub, operatorId: user.operatorId, operatorName: user.operator.name, baseIcao: user.operator.baseIcao };
+  return { userId: session.sub, operatorId: user.operatorId, operatorName: user.operator.name, baseIcao: user.operator.baseIcao, isPrivate: user.operator.isPrivate };
 });
 
 /** The signed-in pilot's Person id, or null (API routes turn this into 401/403). */

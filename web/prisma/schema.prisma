@@ -348,7 +348,8 @@ enum RequestStatus {
 model Operator {
   id           String   @id @default(cuid())
   name         String
-  aocNumber    String?  @unique
+  aocNumber    String?  @unique // null for private operators (own aircraft, no AOC)
+  isPrivate    Boolean  @default(false)
   contactEmail String
   baseIcao     String? // primary hangar base
   createdAt    DateTime @default(now())

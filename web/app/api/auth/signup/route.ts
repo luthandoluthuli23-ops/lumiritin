@@ -33,15 +33,25 @@ const signupSchema = z.discriminatedUnion("role", [
     role: z.literal("OPERATOR"),
     ...account,
     companyName: text(2, 120),
-    aocNumber: z.string().trim().toUpperCase().pipe(z.string().regex(/^[A-Z0-9][A-Z0-9 /-]{2,29}$/, "enter your AOC number")),
+    // Private operators (own aircraft, no AOC) leave this blank.
+    isPrivate: z.boolean().default(false),
+    aocNumber: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .pipe(z.string().regex(/^[A-Z0-9][A-Z0-9 /-]{2,29}$/, "enter your AOC number"))
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
     baseIcao: icao,
   }),
   z.object({
     role: z.literal("PILOT"),
     ...account,
+    // Pilot or cabin crew — both are "crew" (UserRole.PILOT); Person.role distinguishes them.
+    crewRole: z.enum(["PILOT", "CABIN_CREW"]).default("PILOT"),
     licenceNumber: z.string().trim().pipe(z.string().regex(/^[A-Za-z0-9-]{4,20}$/, "letters, digits and hyphens only")),
     whatsapp: phone.optional().or(z.literal("").transform(() => undefined)),
-    /** Used to rank the pilot by distance when crew requests come in. */
+    /** Used to rank the crew member by distance when crew requests come in. */
     homeAirfieldIcao: icao.optional().or(z.literal("").transform(() => undefined)),
     typeRatings: z.array(z.string().trim().toUpperCase().pipe(z.string().regex(/^[A-Z0-9][A-Z0-9/-]{1,15}$/, "invalid rating"))).max(12),
     consentVerification: z.literal(true, { error: "consent is required to verify your licence" }),
@@ -72,6 +82,9 @@ export async function POST(req: NextRequest) {
   if (input.role === "PILOT" && input.whatsapp && !input.consentWhatsapp) {
     return fail(422, "validation_failed", [{ path: "consentWhatsapp", message: "consent is required to send WhatsApp reminders" }]);
   }
+  if (input.role === "OPERATOR" && !input.isPrivate && !input.aocNumber) {
+    return fail(422, "validation_failed", [{ path: "aocNumber", message: "AOC number is required for commercial operators" }]);
+  }
 
   // Airfields must be real rows, not just well-formed codes.
   const airfieldCode = input.role === "OPERATOR" ? input.baseIcao : input.homeAirfieldIcao;
@@ -90,7 +103,7 @@ export async function POST(req: NextRequest) {
 
         case "OPERATOR": {
           const operator = await tx.operator.create({
-            data: { name: input.companyName, aocNumber: input.aocNumber, contactEmail: input.email, baseIcao: input.baseIcao },
+            data: { name: input.companyName, aocNumber: input.isPrivate ? null : input.aocNumber ?? null, isPrivate: input.isPrivate, contactEmail: input.email, baseIcao: input.baseIcao },
           });
           return tx.user.create({ data: { ...common, operatorId: operator.id, homeAirfieldIcao: input.baseIcao } });
         }
@@ -102,7 +115,7 @@ export async function POST(req: NextRequest) {
               email: input.email,
               whatsappE164: input.whatsapp,
               homeAirfieldIcao: input.homeAirfieldIcao,
-              role: "PILOT",
+              role: input.crewRole,
               consents: {
                 create: [
                   { scope: "sacaa_verification", textVersion: CONSENT_TEXT_VERSION },
@@ -111,6 +124,7 @@ export async function POST(req: NextRequest) {
               },
               credentials: {
                 create: {
+                  type: input.crewRole === "CABIN_CREW" ? "CABIN_CREW_CERT" : "PILOT_LICENCE",
                   licenceNumber: input.licenceNumber,
                   // Self-declared, no expiry: the nightly verifier fills real dates once the portal is connected.
                   ratings: { create: [...new Set(input.typeRatings)].map((name) => ({ name, category: "Type", source: "self-declared" })) },
