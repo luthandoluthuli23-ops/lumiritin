@@ -75,9 +75,7 @@ export function VerifyLicenceButton({ lastResult, lastVerifiedAt, autoRun }: Pro
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${badge.cls}`}>{badge.label}</span>
-          <p className="mt-2 text-xs text-slate-tac">
-            {lastVerifiedAt ? `Last checked ${new Date(lastVerifiedAt).toLocaleString("en-ZA")}` : "Never checked against SACAA"}
-          </p>
+          {!lastVerifiedAt && <p className="mt-2 text-xs text-slate-tac">Never checked against SACAA</p>}
         </div>
         <button
           type="button"
