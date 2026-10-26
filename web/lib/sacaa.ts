@@ -184,7 +184,11 @@ export async function fetchSacaaLicence(licence: string): Promise<SacaaResult> {
     return { outcome: "PORTAL_ERROR", record: null, error: err instanceof Error ? err.message : String(err) };
   }
 
-  if (res.status === 404) return { outcome: "NOT_FOUND", record: null, error: null };
+  // SACAA rebuilt the portal in 2025: the old `?lno=` endpoint now 404s, and licence data sits behind
+  // an OTP sent to the holder's phone — so it can't be scraped server-side. Treat an endpoint 404 as the
+  // portal being unavailable for automated checks (NOT "licence not found"), so a real licence is never
+  // falsely flagged. Real verification is holder-mediated via the Lumi document concierge.
+  if (res.status === 404) return { outcome: "PORTAL_ERROR", record: null, error: "portal_endpoint_unavailable" };
   if (res.status === 403 || res.status === 429) return { outcome: "BLOCKED", record: null, error: `HTTP ${res.status}` };
   if (!res.ok) return { outcome: "PORTAL_ERROR", record: null, error: `HTTP ${res.status}` };
 
