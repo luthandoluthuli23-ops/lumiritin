@@ -10,6 +10,7 @@ const TABS = [
   { href: "/operator/pilots", label: "My Pilots" },
   { href: "/operator/insights", label: "Insights" },
   { href: "/operator/bench", label: "Bench" },
+  { href: "/operator/notifications", label: "Notifications" },
 ];
 
 export function OperatorNav({ operatorName }: { operatorName: string }) {

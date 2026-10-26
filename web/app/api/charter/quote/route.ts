@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { sendCharterConfirmation } from "@/lib/email";
 import { ICAO_RE } from "@/lib/airfields";
 import { MAX_MULTI_LEGS, aircraftClass, computeQuote, legDistanceNm } from "@/lib/charter";
 import { toE164 } from "@/lib/phone";
@@ -119,6 +120,15 @@ export async function POST(req: NextRequest) {
           notes: input.notes || undefined,
         },
       });
+      // Confirmation email (no-op/dry-run until RESEND_API_KEY is set; never blocks the booking).
+      await sendCharterConfirmation({
+        to: input.contactEmail,
+        name: input.contactName,
+        reference,
+        priceZar: quote.priceZar,
+        route: legs.map((l) => `${l.fromIcao}→${l.toIcao}`).join(" · "),
+        date: legs[0].date,
+      }).catch(() => {});
       return NextResponse.json({ reference, status: "REQUESTED", quote, legs: storedLegs }, { status: 201 });
     } catch (err) {
       const duplicateRef = err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";

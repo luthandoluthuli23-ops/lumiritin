@@ -1,3 +1,35 @@
+const GRAPH = "https://graph.facebook.com/v21.0";
+
+export const isWhatsappConfigured = () => Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
+
+/**
+ * Sends a connectivity test using a template (default Meta's pre-approved "hello_world"), so an
+ * operator can confirm their WhatsApp Cloud API credentials work before their own templates are
+ * approved. The recipient must be a verified test number while the sender is on a Meta test number.
+ */
+export async function sendTestWhatsapp(toE164: string): Promise<{ ok: boolean; error?: string }> {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneNumberId) return { ok: false, error: "not_configured" };
+  const template = process.env.WHATSAPP_TEST_TEMPLATE ?? "hello_world";
+  const lang = process.env.WHATSAPP_TEST_TEMPLATE_LANG ?? "en_US";
+  try {
+    const res = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to: toE164.replace(/^\+/, ""), type: "template", template: { name: template, language: { code: lang } } }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[whatsapp] test failed HTTP ${res.status}: ${body.slice(0, 300)}`);
+      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export interface CrewPingMessage {
   toE164: string;
   name: string;
