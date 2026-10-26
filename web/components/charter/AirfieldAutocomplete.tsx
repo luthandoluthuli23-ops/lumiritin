@@ -94,7 +94,7 @@ export function AirfieldAutocomplete({ airfields, value, onChange, label: fieldL
         />
       </label>
       {open && (
-        <ul id={listId} role="listbox" className="glass absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-xl bg-obsidian-800/95 py-1 shadow-xl">
+        <ul id={listId} role="listbox" style={{ backgroundColor: "#111826" }} className="absolute z-50 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-white/10 py-1 shadow-2xl">
           {matches.length === 0 && <li className="px-4 py-3 text-sm text-slate-tac">No matching airfield</li>}
           {matches.map((a, i) => (
             <li
