@@ -32,7 +32,14 @@ export async function sendEmail(msg: EmailMessage): Promise<{ ok: boolean; error
     if (!res.ok) {
       const body = await res.text();
       console.error(`[email] failed HTTP ${res.status}: ${body.slice(0, 300)}`);
-      return { ok: false, error: `HTTP ${res.status}` };
+      let detail = "";
+      try {
+        const j = JSON.parse(body) as { message?: string; error?: string };
+        detail = j.message ?? j.error ?? "";
+      } catch {
+        detail = body.slice(0, 200);
+      }
+      return { ok: false, error: detail ? `HTTP ${res.status}: ${detail}` : `HTTP ${res.status}` };
     }
     return { ok: true };
   } catch (err) {
