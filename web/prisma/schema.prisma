@@ -132,6 +132,14 @@ enum VerificationOutcome {
   PORTAL_ERROR
 }
 
+// How a credential's last VERIFIED result was obtained — so a badge can be honest about the source.
+//   SACAA_PORTAL  — a live check against the SACAA licence portal (strongest).
+//   LUMI_DOCUMENT — Lumi read the holder's own official SACAA document (licence PDF/card) and cross-checked it.
+enum VerificationMethod {
+  SACAA_PORTAL
+  LUMI_DOCUMENT
+}
+
 model Person {
   id               String    @id @default(cuid())
   fullName         String
@@ -147,12 +155,16 @@ model Person {
   icalUrl          String?
   icalSyncedAt     DateTime?
   icalLastError    String?
+  // The pilot's existing digital logbook, remembered for provenance and re-import (e.g. "ForeFlight", "MyFlightbook").
+  logbookProvider  String?
+  logbookRef       String? // their handle/number in that logbook, for display only
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   credentials   Credential[]
   medicals      Medical[]
   logbook       LogbookSummary?
+  flightLog     FlightLogEntry[]
   availability  Availability[]
   consents      Consent[]
   notifications Notification[]
@@ -176,6 +188,7 @@ model Credential {
   expiresAt              DateTime?            @db.Date
   lastVerifiedAt         DateTime?
   lastVerificationResult VerificationOutcome?
+  lastVerificationMethod VerificationMethod? // how the last VERIFIED result was obtained (portal vs Lumi document)
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
@@ -234,6 +247,9 @@ model CheckRecord {
   @@map("check_record")
 }
 
+// Brought-forward / opening balance: the hours a pilot had BEFORE detailed per-flight logging began — set
+// from a self-declaration or from Lumi reading an existing logbook's totals (a PDF/photo/paper summary).
+// The grand total shown and used for matching = this opening balance + the sum of FlightLogEntry rows.
 model LogbookSummary {
   id               String    @id @default(cuid())
   personId         String    @unique
@@ -251,6 +267,49 @@ model LogbookSummary {
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@map("logbook_summary")
+}
+
+// Where a logged flight came from, which sets how much it can be trusted.
+enum FlightLogSource {
+  PLATFORM // flown through Lumiritin and witnessed by the booking operator — independently verified
+  IMPORTED // a row from the pilot's own existing digital logbook (CSV) or read by Lumi — self-declared
+  MANUAL //   entered by the pilot by hand, e.g. private/off-platform flying — self-declared
+}
+
+// One flight. Platform flights are auto-created (and kept in sync) from filled crew requests; the pilot can
+// also import their existing logbook or add off-platform flights by hand. Categories mirror LogbookSummary.
+model FlightLogEntry {
+  id               String          @id @default(cuid())
+  personId         String
+  date             DateTime        @db.Date
+  departureIcao    String?
+  arrivalIcao      String?
+  aircraftType     String? // ICAO designator or free text
+  aircraftReg      String?
+  operatorName     String? // who the flight was for (set for platform flights)
+  totalHours       Decimal         @db.Decimal(5, 1)
+  picHours         Decimal?        @db.Decimal(5, 1)
+  coPilotHours     Decimal?        @db.Decimal(5, 1) // co-pilot / SIC time (universal logbook column)
+  dualHours        Decimal?        @db.Decimal(5, 1) // dual received / P-u-t
+  instructorHours  Decimal?        @db.Decimal(5, 1) // time given as instructor (universal logbook column)
+  nightHours       Decimal?        @db.Decimal(5, 1)
+  instrumentHours  Decimal?        @db.Decimal(5, 1)
+  multiEngineHours Decimal?        @db.Decimal(5, 1)
+  turbineHours     Decimal?        @db.Decimal(5, 1)
+  dayLandings      Int             @default(0)
+  nightLandings    Int             @default(0)
+  certifier        String? // CFI / PIC signature & licence no. that certifies the entry
+  source           FlightLogSource @default(MANUAL)
+  verified         Boolean         @default(false) // true for operator-witnessed platform flights
+  crewRequestId    String?         @unique // links a PLATFORM entry to its booking, so sync stays idempotent
+  remarks          String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId, date])
+  @@map("flight_log_entry")
 }
 
 // A pilot's effective state is derived from these windows by lib/availability.ts:
@@ -353,6 +412,11 @@ model Operator {
   contactEmail String
   baseIcao     String? // primary hangar base
   createdAt    DateTime @default(now())
+
+  // AOC verification via Lumi (document). Private operators have no AOC, so these stay null.
+  aocStatus     String? // e.g. "Valid" as read from the certificate
+  aocVerifiedAt DateTime?
+  aocSnapshot   Json? // Lumi's extracted certificate facts, for audit
 
   aircraft  Aircraft[]
   requests  CrewRequest[]

@@ -187,3 +187,111 @@ export async function extractFromDocument(
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+// ── Reading a logbook's individual flights (the seamless transfer) ────────────
+
+/** One flight as Lumi reads it off a logbook page/export. Dates ISO; hours decimal; nulls where unreadable. */
+export interface LumiFlightRow {
+  date: string | null;
+  from: string | null;
+  to: string | null;
+  aircraftType: string | null;
+  aircraftReg: string | null;
+  total: number | null;
+  pic: number | null;
+  coPilot: number | null;
+  dual: number | null;
+  instructor: number | null;
+  night: number | null;
+  instrument: number | null;
+  multi: number | null;
+  turbine: number | null;
+  dayLandings: number | null;
+  nightLandings: number | null;
+  certifier: string | null;
+  remarks: string | null;
+}
+
+export interface LumiFlightsResult {
+  ok: boolean;
+  flights?: LumiFlightRow[];
+  /** Lumi's note if it read a running total instead of (or as well as) rows. */
+  broughtForwardTotal?: number | null;
+  error?: string;
+}
+
+const FLIGHTS_SYSTEM = `You are Lumi, reading a pilot's existing logbook so it can be transferred into Lumiritin with no manual typing.
+The input is one or more logbook pages — a scan, a photo, a PDF export, or a printout from ForeFlight, LogTen, MyFlightbook, a paper logbook, or similar.
+
+Extract EVERY individual flight row you can read into a JSON array. Work only from what is visibly present — never invent a value; use null where a cell is blank or unreadable.
+
+Rules:
+- Dates: ISO yyyy-mm-dd. Convert any format you see (e.g. "14 Mar 2027", "2027/03/14", "14/03/27"). South African logbooks are usually day-first.
+- Hours are decimals (e.g. 1.5). If a cell shows h:mm (e.g. 1:30) convert to decimal (1.5).
+- Map columns sensibly: total/total time, PIC/P1, co-pilot/SIC/P2, dual/P-u-t, instructor/CFI, night, instrument/IFR, multi/ME, turbine, day & night landings, from/to (ICAO or airport), aircraft type, registration/tail, remarks. The CFI/PIC signature or certifying name & licence number goes in certifier.
+- If the page shows a brought-forward / page-total / grand-total line, do NOT emit it as a flight; instead put that running total in broughtForwardTotal.
+- Skip header rows, subtotal rows, and totals rows. Only real flights go in the array.
+- Respond with ONLY a single JSON object, no prose, no markdown fences:
+{ "flights": [ { "date": "yyyy-mm-dd", "from": string|null, "to": string|null, "aircraftType": string|null, "aircraftReg": string|null, "total": number|null, "pic": number|null, "coPilot": number|null, "dual": number|null, "instructor": number|null, "night": number|null, "instrument": number|null, "multi": number|null, "turbine": number|null, "dayLandings": number|null, "nightLandings": number|null, "certifier": string|null, "remarks": string|null } ], "broughtForwardTotal": number|null }`;
+
+/** Read a logbook document into individual flight rows. Never throws. */
+export async function extractFlightsFromDocument(file: { data: string; mediaType: string }): Promise<LumiFlightsResult> {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return { ok: false, error: "not_configured" };
+
+  const sourceBlock =
+    file.mediaType === "application/pdf"
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: file.data } }
+      : { type: "image", source: { type: "base64", media_type: file.mediaType, data: file.data } };
+
+  try {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 8000,
+        system: FLIGHTS_SYSTEM,
+        messages: [{ role: "user", content: [sourceBlock, { type: "text", text: "Read every flight on these logbook page(s) into the JSON object described." }] }],
+      }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[lumi.flights] HTTP ${res.status}: ${body.slice(0, 300)}`);
+      return { ok: false, error: `HTTP ${res.status}` };
+    }
+    const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+    const text = (data.content ?? []).filter((b) => b.type === "text" && typeof b.text === "string").map((b) => b.text as string).join("\n");
+    const parsed = parseJson(text);
+    if (!parsed) return { ok: false, error: "parse_failed" };
+    const raw = Array.isArray((parsed as Record<string, unknown>).flights) ? ((parsed as Record<string, unknown>).flights as unknown[]) : [];
+    const flights: LumiFlightRow[] = raw
+      .map((r) => (r && typeof r === "object" ? (r as Record<string, unknown>) : {}))
+      .map((r) => ({
+        date: str(r.date),
+        from: str(r.from),
+        to: str(r.to),
+        aircraftType: str(r.aircraftType),
+        aircraftReg: str(r.aircraftReg),
+        total: num(r.total),
+        pic: num(r.pic),
+        coPilot: num(r.coPilot),
+        dual: num(r.dual),
+        instructor: num(r.instructor),
+        night: num(r.night),
+        instrument: num(r.instrument),
+        multi: num(r.multi),
+        turbine: num(r.turbine),
+        dayLandings: num(r.dayLandings),
+        nightLandings: num(r.nightLandings),
+        certifier: str(r.certifier),
+        remarks: str(r.remarks),
+      }))
+      .filter((f) => f.date && f.total != null && f.total > 0);
+    return { ok: true, flights, broughtForwardTotal: num((parsed as Record<string, unknown>).broughtForwardTotal) };
+  } catch (err) {
+    console.error("[lumi.flights] failed:", err instanceof Error ? err.message : err);
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}

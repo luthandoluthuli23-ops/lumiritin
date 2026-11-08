@@ -83,6 +83,39 @@ export async function sendExpiryReminderEmail(p: { to: string; name: string; ite
   return sendEmail({ to: p.to, subject: `Reminder: your ${p.item} ${p.daysLeft <= 0 ? "has expired" : "expires soon"}`, html });
 }
 
+export async function sendWelcomeEmail(p: { to: string; firstName: string; role: "PILOT" | "OPERATOR" | "PASSENGER" }): Promise<{ ok: boolean; error?: string }> {
+  const name = escapeHtml(p.firstName || "there");
+  const next =
+    p.role === "PILOT"
+      ? `<p>Here's how to get flight-ready:</p>
+         <ol style="padding-left:18px;margin:8px 0 0">
+           <li style="margin-bottom:6px"><b style="color:#e2b857">Verify with Lumi</b> — upload your SACAA licence and our AI concierge confirms it in seconds.</li>
+           <li style="margin-bottom:6px"><b style="color:#e2b857">Bring your logbook</b> — import your existing hours, then every flight you fly through us logs itself.</li>
+           <li>Mark yourself <b style="color:#e2b857">available</b> so operators can offer you duties.</li>
+         </ol>`
+      : p.role === "OPERATOR"
+        ? `<p>You're set up to post crew requests and match verified pilots and cabin crew in minutes. Add your fleet and your base to get going.</p>`
+        : `<p>You're all set to request charters and browse empty legs.</p>`;
+  const html = shell(
+    `<p style="font-size:16px">Welcome aboard, ${name}.</p>
+     <p>Your Lumiritin account is ready.</p>
+     ${next}
+     <p style="margin-top:16px"><a href="https://lumiritin.co.za" style="color:#e2b857">Open Lumiritin →</a></p>`,
+  );
+  return sendEmail({ to: p.to, subject: "Welcome to Lumiritin ✈️", html });
+}
+
+export async function sendCredentialVerifiedEmail(p: { to: string; name: string; credential: string; method: string; expires?: string | null }): Promise<{ ok: boolean; error?: string }> {
+  const label = p.method === "SACAA_PORTAL" ? "verified against the SACAA portal" : "verified by Lumi from your document";
+  const html = shell(
+    `<p style="font-size:16px">Hi ${escapeHtml(p.name.split(" ")[0] || p.name)},</p>
+     <p><b style="color:#e2b857">Lumi has confirmed your ${escapeHtml(p.credential)}.</b> It's now ${label}, and operators will see a verified badge on your profile.</p>
+     ${p.expires ? `<p style="font-size:14px;color:#8b97ab">Valid until ${escapeHtml(p.expires)}. We'll remind you before it expires.</p>` : ""}
+     <p style="margin-top:16px"><a href="https://lumiritin.co.za/wallet" style="color:#e2b857">View your credential wallet →</a></p>`,
+  );
+  return sendEmail({ to: p.to, subject: "Lumi has verified your credential ✓", html });
+}
+
 export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
   return sendEmail({
     to,

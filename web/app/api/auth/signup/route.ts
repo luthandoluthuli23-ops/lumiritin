@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { sendWelcomeEmail } from "@/lib/email";
 import { ICAO_RE } from "@/lib/airfields";
 import { hashPassword } from "@/lib/password";
 import { toE164 } from "@/lib/phone";
@@ -138,6 +139,8 @@ export async function POST(req: NextRequest) {
     });
 
     await startSession(user);
+    // Welcome email (safe no-op until RESEND_API_KEY is set; never blocks or breaks signup).
+    await sendWelcomeEmail({ to: input.email, firstName: input.firstName, role: input.role });
     return NextResponse.json({ redirect: ROLE_HOME[input.role] }, { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

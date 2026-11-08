@@ -18,11 +18,20 @@ import { haversineKm, type Coordinates } from "@/lib/geo";
 
 /** Professional flying needs a Class 1 medical. Confirm against current SACAA requirements before relying on this. */
 export const MAX_MEDICAL_CLASS = 1;
-/** Self-declared ratings (typed at sign-up) do not count until SACAA-verified. Set false to trust declarations. */
-export const REQUIRE_VERIFIED_RATING = true;
-/** A licence not re-verified within this many days is treated as unverified. The nightly job should keep this fresh. */
+/**
+ * Until SACAA/Lumi verification is live for everyone, verification is ADVISORY — shown as a badge, never a hard
+ * gate — so self-declared crew still appear and can be dispatched. Flip on (env MATCH_STRICT_VERIFICATION=true)
+ * once crew credentials are actually being verified, and the licence/rating-verification gates start excluding again.
+ */
+export const STRICT_VERIFICATION = process.env.MATCH_STRICT_VERIFICATION === "true";
+/** Self-declared ratings (typed at sign-up) count unless strict verification is on. */
+export const REQUIRE_VERIFIED_RATING = STRICT_VERIFICATION;
+/** A licence not re-verified within this many days is treated as unverified (only matters under strict verification). */
 export const MAX_VERIFICATION_AGE_DAYS = 7;
 export const SHORTLIST_SIZE = 3;
+
+export type MatchRole = "PILOT" | "CABIN_CREW" | "AME" | "GROUND_CREW";
+const ROLE_LABEL: Record<MatchRole, string> = { PILOT: "Pilot", CABIN_CREW: "Cabin crew", AME: "Engineer (AME)", GROUND_CREW: "Ground crew" };
 
 export const SCORE_MAX = { proximity: 60, experience: 25, freshness: 15 } as const;
 /** Hours at or above this earn full experience points. */
@@ -37,7 +46,7 @@ export interface CandidateInput {
   homeCoords: Coordinates | null;
   travelRadiusKm: number | null;
   ratings: { name: string; source: string; expiresAt: Date | null }[];
-  licence: { expiresAt: Date | null; portalStatus: string | null; lastVerificationResult: string | null; lastVerifiedAt: Date | null } | null;
+  licence: { expiresAt: Date | null; portalStatus: string | null; lastVerificationResult: string | null; lastVerificationMethod: string | null; lastVerifiedAt: Date | null } | null;
   medicals: { class: number; expiresAt: Date | null }[];
   totalHours: number | null;
   windows: AvailabilityWindow[];
@@ -49,7 +58,9 @@ export interface CandidateInput {
 
 export interface MatchRequest {
   operatorId: string;
-  /** ICAO type designators the pilot must hold, all of them. Empty = no type requirement. */
+  /** Which crew role is being sought. Type ratings and the Class-1 medical gate apply only to PILOT. */
+  role: MatchRole;
+  /** ICAO type designators the pilot must hold, all of them. Empty = no type requirement. Ignored for non-pilots. */
   requiredTypes: string[];
   departure: Coordinates | null;
   startsAt: Date;
@@ -191,6 +202,7 @@ const goodLicenceStatus = (s: string | null) => s !== null && /^\s*valid/i.test(
 export function evaluate(c: CandidateInput, req: MatchRequest): ExclusionCode[] {
   const why: ExclusionCode[] = [];
   const end = req.endsAt.getTime();
+  const isPilot = req.role === "PILOT";
 
   // 1. Pool access
   const own = c.rosterOperatorIds.includes(req.operatorId);
@@ -202,39 +214,47 @@ export function evaluate(c: CandidateInput, req: MatchRequest): ExclusionCode[] 
   if (state.state === "BOOKED") why.push("BOOKED");
   else if (state.state === "OFF") why.push("OFF");
 
-  // 3. Type rating
-  for (const type of req.requiredTypes) {
-    const held = c.ratings.filter((r) => ratingMatchesType(r.name, type));
-    if (held.length === 0) {
-      why.push("NO_RATING");
-      break;
-    }
-    const verified = REQUIRE_VERIFIED_RATING ? held.filter((r) => r.source !== "self-declared") : held;
-    if (verified.length === 0) {
-      why.push("RATING_UNVERIFIED");
-      break;
-    }
-    if (!verified.some((r) => r.expiresAt === null || r.expiresAt.getTime() > end)) {
-      why.push("RATING_EXPIRES");
-      break;
+  // 3. Type rating — pilots only (cabin crew, engineers and ground crew aren't type-rated like pilots)
+  if (isPilot) {
+    for (const type of req.requiredTypes) {
+      const held = c.ratings.filter((r) => ratingMatchesType(r.name, type));
+      if (held.length === 0) {
+        why.push("NO_RATING");
+        break;
+      }
+      const verified = REQUIRE_VERIFIED_RATING ? held.filter((r) => r.source !== "self-declared") : held;
+      if (verified.length === 0) {
+        why.push("RATING_UNVERIFIED");
+        break;
+      }
+      if (!verified.some((r) => r.expiresAt === null || r.expiresAt.getTime() > end)) {
+        why.push("RATING_EXPIRES");
+        break;
+      }
     }
   }
 
-  // 4. Licence currency and verifier flags
+  // 4. Credential currency. Verification flags are a HARD gate only under strict verification; otherwise they're
+  //    advisory (shown as a badge) so self-declared crew still appear until SACAA/Lumi verification is live.
   if (!c.licence) {
     why.push("NO_LICENCE");
   } else {
     const l = c.licence;
     if (l.expiresAt !== null && l.expiresAt.getTime() <= end) why.push("LICENCE_EXPIRES");
-    if (l.lastVerificationResult === null) why.push("NOT_VERIFIED");
-    else if (l.lastVerificationResult !== "VERIFIED" || !goodLicenceStatus(l.portalStatus)) why.push("LICENCE_FLAGGED");
-    else if (!l.lastVerifiedAt || req.now.getTime() - l.lastVerifiedAt.getTime() > MAX_VERIFICATION_AGE_DAYS * 86_400_000) why.push("VERIFICATION_STALE");
+    if (STRICT_VERIFICATION) {
+      if (l.lastVerificationResult === null) why.push("NOT_VERIFIED");
+      else if (l.lastVerificationResult !== "VERIFIED" || !goodLicenceStatus(l.portalStatus)) why.push("LICENCE_FLAGGED");
+      else if (!l.lastVerifiedAt || req.now.getTime() - l.lastVerifiedAt.getTime() > MAX_VERIFICATION_AGE_DAYS * 86_400_000) why.push("VERIFICATION_STALE");
+    }
   }
 
-  // 5. Medical
-  const ofClass = c.medicals.filter((m) => m.class <= MAX_MEDICAL_CLASS);
-  if (ofClass.length === 0) why.push("NO_MEDICAL");
-  else if (!ofClass.some((m) => m.expiresAt !== null && m.expiresAt.getTime() > end)) why.push("MEDICAL_EXPIRES");
+  // 5. Medical — a Class-1 medical is a hard gate for pilots. Cabin/ground crew medicals differ, so for non-pilots
+  //    an expired or missing medical is advisory, not a gate.
+  if (isPilot) {
+    const ofClass = c.medicals.filter((m) => m.class <= MAX_MEDICAL_CLASS);
+    if (ofClass.length === 0) why.push("NO_MEDICAL");
+    else if (!ofClass.some((m) => m.expiresAt !== null && m.expiresAt.getTime() > end)) why.push("MEDICAL_EXPIRES");
+  }
 
   // 6. Radius (only when the pilot set one and we know both ends)
   if (c.travelRadiusKm !== null && c.homeCoords && req.departure && haversineKm(c.homeCoords, req.departure) > c.travelRadiusKm) {
@@ -253,8 +273,18 @@ function toMatch(c: CandidateInput, req: MatchRequest): Match {
   const exp = experiencePoints(c.totalHours);
   const fresh = freshnessPoints(c.licence?.lastVerifiedAt ?? null, req.now);
 
-  const medical = c.medicals.filter((m) => m.class <= MAX_MEDICAL_CLASS).sort((a, b) => (b.expiresAt?.getTime() ?? 0) - (a.expiresAt?.getTime() ?? 0))[0];
+  const medical = c.medicals.slice().sort((a, b) => (b.expiresAt?.getTime() ?? 0) - (a.expiresAt?.getTime() ?? 0))[0];
   const own = c.rosterOperatorIds.includes(req.operatorId);
+  const isPilot = req.role === "PILOT";
+  const verified = c.licence?.lastVerificationResult === "VERIFIED";
+  // Be honest about HOW the credential was verified: a live SACAA portal check vs Lumi reading the holder's document.
+  const credentialValue = !verified
+    ? "Self-declared"
+    : c.licence?.lastVerificationMethod === "SACAA_PORTAL"
+      ? "SACAA-verified"
+      : c.licence?.lastVerificationMethod === "LUMI_DOCUMENT"
+        ? "Lumi-verified"
+        : "Verified";
 
   return {
     personId: c.personId,
@@ -262,10 +292,12 @@ function toMatch(c: CandidateInput, req: MatchRequest): Match {
     score: prox.points + exp.points + fresh.points,
     distanceKm: km === null ? null : Math.round(km),
     badges: [
-      { label: "Rating", value: req.requiredTypes.length ? `${req.requiredTypes.join(", ")} exact match` : "No type required", ok: true },
+      isPilot
+        ? { label: "Rating", value: req.requiredTypes.length ? req.requiredTypes.join(", ") : "No type required", ok: true }
+        : { label: "Role", value: ROLE_LABEL[req.role], ok: true },
       { label: "Distance", value: km === null ? "unknown" : `${Math.round(km)} km`, ok: km !== null && km < 50 },
-      { label: "Medical", value: medical?.expiresAt ? `Class ${medical.class} valid to ${medical.expiresAt.toISOString().slice(0, 10)}` : "Valid", ok: true },
-      { label: "Licence", value: "Verified, no flags", ok: true },
+      ...(medical ? [{ label: "Medical", value: medical.expiresAt ? `Class ${medical.class} to ${medical.expiresAt.toISOString().slice(0, 10)}` : `Class ${medical.class}`, ok: true }] : []),
+      { label: "Credential", value: credentialValue, ok: verified },
     ],
     breakdown: [
       { criterion: "Proximity", points: prox.points, max: SCORE_MAX.proximity, detail: prox.detail },

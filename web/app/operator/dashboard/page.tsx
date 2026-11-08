@@ -8,6 +8,8 @@ import { requireOperator } from "@/lib/session";
 import { primaryBtn } from "@/components/ui/Field";
 import { StatCards } from "@/components/operator/StatCards";
 import { ReputationMini } from "@/components/insights/Reputation";
+import { LumiVerifyPanel } from "@/components/pilot/LumiVerifyPanel";
+import { isLumiConfigured } from "@/lib/lumi";
 
 export const metadata: Metadata = { title: "Operator dashboard — Lumiritin" };
 
@@ -16,16 +18,17 @@ const CLASS_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 export default async function OperatorDashboard() {
-  const { operatorId, operatorName } = await requireOperator();
+  const { operatorId, operatorName, isPrivate } = await requireOperator();
   const now = new Date();
 
-  const [fleet, inquiries, inquiryCount, rosterCount, crewOpen, roster] = await Promise.all([
+  const [fleet, inquiries, inquiryCount, rosterCount, crewOpen, roster, orgRow] = await Promise.all([
     db.aircraft.count({ where: { operatorId } }),
     db.charterBooking.findMany({ where: { status: "REQUESTED" }, orderBy: { createdAt: "desc" }, take: 5 }),
     db.charterBooking.count({ where: { status: "REQUESTED" } }),
     db.crewRoster.count({ where: { operatorId } }),
     db.crewRequest.count({ where: { operatorId, status: "OPEN", endsAt: { gte: now } } }),
     operatorRoster(operatorId),
+    db.operator.findUnique({ where: { id: operatorId }, select: { aocStatus: true, aocVerifiedAt: true } }),
   ]);
   const topCrew = roster.slice(0, 3);
 
@@ -47,6 +50,25 @@ export default async function OperatorDashboard() {
           { label: "Open crew requests", value: crewOpen, href: "/operator/crewing" },
         ]}
       />
+
+      {!isPrivate && isLumiConfigured() && (
+        <section className="glass rounded-3xl p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-2xl text-ivory">AOC verification</h2>
+            {orgRow?.aocVerifiedAt ? (
+              <span className="inline-flex items-center rounded-full border border-emerald-status/40 bg-emerald-status/10 px-3 py-1 text-xs font-medium text-emerald-status">
+                Verified{orgRow.aocStatus ? ` · ${orgRow.aocStatus}` : ""} · {new Date(orgRow.aocVerifiedAt).toLocaleDateString("en-ZA")}
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-tac">Unverified</span>
+            )}
+          </div>
+          <LumiVerifyPanel
+            endpoint="/api/operator/verify-aoc"
+            description="Upload your SACAA Air Operator Certificate (AOC) — a PDF or a clear photo. Lumi reads it and confirms your operator credentials in seconds. Nothing is shared publicly."
+          />
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="glass rounded-3xl p-6">

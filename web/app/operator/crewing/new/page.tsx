@@ -14,8 +14,8 @@ export default async function NewCrewRequestPage() {
       <header>
         <h1 className="font-display text-5xl text-ivory">Crew dispatcher</h1>
         <p className="mt-2 max-w-2xl text-slate-tac">
-          Describe the flight. We rank qualified, available pilots with transparent scoring, then ping the top three. They have 10 minutes to accept before the next
-          pilot is tried.
+          Describe the flight and pick the role — flight crew or cabin crew. We rank qualified, available crew with transparent scoring, then ping the top three.
+          They have 10 minutes to accept before the next candidate is tried.
         </p>
       </header>
       <CrewDispatcher airfields={airfields} defaultBase={baseIcao ?? ""} />

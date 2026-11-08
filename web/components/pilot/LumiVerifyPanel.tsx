@@ -15,7 +15,15 @@ interface Extracted {
   issues: string[];
 }
 
-export function LumiVerifyPanel({ label = "your SACAA licence" }: { label?: string }) {
+interface PanelProps {
+  label?: string;
+  /** API route to POST the file to. Defaults to the crew licence endpoint. */
+  endpoint?: string;
+  /** Override the explanatory copy (operators have different instructions). */
+  description?: string;
+}
+
+export function LumiVerifyPanel({ label = "your SACAA licence", endpoint = "/api/lumi/verify", description }: PanelProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -40,7 +48,7 @@ export function LumiVerifyPanel({ label = "your SACAA licence" }: { label?: stri
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch("/api/lumi/verify", { method: "POST", body });
+      const res = await fetch(endpoint, { method: "POST", body });
       const data = await res.json().catch(() => null);
       if (res.status === 503) return done("err", data?.message ?? "Lumi isn't switched on yet.");
       if (res.status === 429) return done("warn", data?.message ?? "Too many attempts. Please wait a few minutes.");
@@ -82,8 +90,8 @@ export function LumiVerifyPanel({ label = "your SACAA licence" }: { label?: stri
         <div className="min-w-0 flex-1">
           <p className="font-medium text-ivory">Verify with Lumi</p>
           <p className="mt-1 text-xs text-slate-tac">
-            Upload {label} — the PDF you download from the SACAA card-scan (after the OTP on your phone), or a clear photo of your card.
-            Lumi reads it and confirms your credential in seconds. Nothing is shared publicly.
+            {description ??
+              `Upload ${label} — the PDF you download from the SACAA card-scan (after the OTP on your phone), or a clear photo of your card. Lumi reads it and confirms your credential in seconds. Nothing is shared publicly.`}
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">

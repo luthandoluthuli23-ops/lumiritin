@@ -63,6 +63,45 @@ body {
   background: rgb(212 175 55 / 0.35);
 }
 
+/* Lumi — a little paper plane that flies around in a circle, nose leading, while we build the concierge. */
+.lumi-jet-wrap {
+  display: inline-block;
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex: none;
+}
+.lumi-jet {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 34px;
+  height: 34px;
+  /* gold plane flying around the circle, nose leading (offset-rotate follows the path direction) */
+  offset-path: circle(13px);
+  offset-rotate: auto;
+  animation: lumi-orbit 3.4s linear infinite;
+  will-change: offset-distance;
+}
+@keyframes lumi-orbit {
+  to { offset-distance: 100%; }
+}
+/* Fallback for browsers without offset-path: a simple circular drift so it still moves. */
+@supports not (offset-path: circle(16px)) {
+  .lumi-jet { animation: lumi-orbit-fallback 3.2s linear infinite; }
+  @keyframes lumi-orbit-fallback {
+    0% { transform: translate(16px, 0) rotate(90deg); }
+    25% { transform: translate(0, 16px) rotate(180deg); }
+    50% { transform: translate(-16px, 0) rotate(270deg); }
+    75% { transform: translate(0, -16px) rotate(360deg); }
+    100% { transform: translate(16px, 0) rotate(450deg); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No orbit for reduced-motion: show the plane sitting still, nose forward (not frozen mid-bank). */
+  .lumi-jet { animation: none; offset-path: none; }
+}
+
 /* Frosted glass surface used by cards, the header and the booking drawer.
    Uses background-IMAGE (not the `background` shorthand) so it never resets the
    element's background-color: overlays like the fixed navbar and the booking drawer

@@ -31,6 +31,7 @@ const days = (n: number) => Array.from({ length: n }, (_, i) => new Date(Date.no
 
 export function CrewDispatcher({ airfields, defaultBase }: { airfields: AirfieldOption[]; defaultBase: string }) {
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [role, setRole] = useState("PILOT");
   const [summary, setSummary] = useState("");
   const [list, setList] = useState<Shortlist | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
@@ -43,7 +44,8 @@ export function CrewDispatcher({ airfields, defaultBase }: { airfields: Airfield
     const f = new FormData(e.currentTarget);
     const startsAt = `${f.get("date")}T${f.get("time")}:00+02:00`;
     if (new Date(startsAt).getTime() <= Date.now()) return setError("Choose a start time in the future.");
-    const type = String(f.get("aircraftType"));
+    const roleVal = String(f.get("role"));
+    const type = roleVal === "PILOT" ? String(f.get("aircraftType") ?? "") : "";
 
     setBusy(true);
     setError(null);
@@ -51,7 +53,7 @@ export function CrewDispatcher({ airfields, defaultBase }: { airfields: Airfield
       const create = await fetch("/api/crew-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: f.get("role"), aircraftType: type, departureIcao: f.get("departureIcao"), startsAt, hoursRequired: Number(f.get("hours")) }),
+        body: JSON.stringify({ role: roleVal, aircraftType: type || undefined, departureIcao: f.get("departureIcao"), startsAt, hoursRequired: Number(f.get("hours")) }),
       });
       const created = await create.json().catch(() => null);
       if (!create.ok) return setError(apiErrorMessage(created));
@@ -60,7 +62,8 @@ export function CrewDispatcher({ airfields, defaultBase }: { airfields: Airfield
       if (!res.ok) return setError("Could not build the shortlist. Please try again.");
       setList(await res.json());
       setRequestId(created.id);
-      setSummary(`${AIRCRAFT_TYPES.find(([c]) => c === type)?.[1] ?? type} · ${f.get("departureIcao")} · ${formatWindow(startsAt, new Date(new Date(startsAt).getTime() + Number(f.get("hours")) * 3_600_000).toISOString())}`);
+      const lead = roleVal === "PILOT" ? (AIRCRAFT_TYPES.find(([c]) => c === type)?.[1] ?? type) : (ROLES.find(([v]) => v === roleVal)?.[1] ?? roleVal);
+      setSummary(`${lead} · ${f.get("departureIcao")} · ${formatWindow(startsAt, new Date(new Date(startsAt).getTime() + Number(f.get("hours")) * 3_600_000).toISOString())}`);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -75,7 +78,7 @@ export function CrewDispatcher({ airfields, defaultBase }: { airfields: Airfield
     try {
       const res = await fetch(`/api/crew-requests/${requestId}/dispatch`, { method: "POST" });
       const data = await res.json().catch(() => null);
-      if (!res.ok) return setError(data?.error === "no_candidates" ? "No eligible pilots right now." : apiErrorMessage(data));
+      if (!res.ok) return setError(data?.error === "no_candidates" ? "No eligible crew right now." : apiErrorMessage(data));
       setStatus({ status: "OPEN", dispatched: true, assignedPersonId: null, pings: [] });
     } finally {
       setBusy(false);
@@ -108,11 +111,15 @@ export function CrewDispatcher({ airfields, defaultBase }: { airfields: Airfield
   if (!list) {
     return (
       <form onSubmit={find} className="glass grid max-w-3xl gap-5 rounded-3xl p-6 sm:grid-cols-2 sm:p-8">
-        <SelectField label="Role" name="role" defaultValue="PILOT">{ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</SelectField>
-        <SelectField label="Aircraft type" name="aircraftType" required defaultValue="" hint="The pilot must hold an exact type rating.">
-          <option value="" disabled>Select a type…</option>
-          {AIRCRAFT_TYPES.map(([code, name]) => <option key={code} value={code}>{name} ({code})</option>)}
-        </SelectField>
+        <SelectField label="Role" name="role" defaultValue="PILOT" onChange={(e) => setRole(e.target.value)}>{ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</SelectField>
+        {role === "PILOT" ? (
+          <SelectField label="Aircraft type" name="aircraftType" required defaultValue="" hint="The pilot must hold an exact type rating.">
+            <option value="" disabled>Select a type…</option>
+            {AIRCRAFT_TYPES.map(([code, name]) => <option key={code} value={code}>{name} ({code})</option>)}
+          </SelectField>
+        ) : (
+          <div className="flex items-end text-sm text-slate-tac">Cabin &amp; other crew aren&rsquo;t matched on an aircraft type rating.</div>
+        )}
         <SelectField label="Reporting airfield" name="departureIcao" required defaultValue={defaultBase}>
           <option value="" disabled>Select an airfield…</option>
           {airfields.map((a) => <option key={a.icao} value={a.icao}>{a.icao} · {a.city} — {a.name}</option>)}
@@ -139,10 +146,10 @@ export function CrewDispatcher({ airfields, defaultBase }: { airfields: Airfield
         <>
           {list.shortlist.length === 0 ? (
             <div className="glass rounded-3xl p-8">
-              <h2 className="font-display text-3xl text-ivory">No eligible pilots right now</h2>
-              <p className="mt-2 text-slate-tac">Every pilot was filtered out by a mandatory check. You may be able to widen the request (a different time or airfield).</p>
+              <h2 className="font-display text-3xl text-ivory">No eligible crew right now</h2>
+              <p className="mt-2 text-slate-tac">Everyone was filtered out by a mandatory check — most often nobody is marked available for this exact window. Try a different time or airfield, or check the reasons below.</p>
               <ExcludedSummary list={list} />
-              <Link href="/operator/bench" className="mt-4 inline-block text-sm text-gold-light underline underline-offset-4">Offer your own pilots to the shared pool to reach more crew</Link>
+              <Link href="/operator/bench" className="mt-4 inline-block text-sm text-gold-light underline underline-offset-4">Offer your own crew to the shared pool to reach more</Link>
             </div>
           ) : (
             <>
@@ -152,8 +159,8 @@ export function CrewDispatcher({ airfields, defaultBase }: { airfields: Airfield
               <ExcludedSummary list={list} />
               <div className="glass flex flex-wrap items-center justify-between gap-4 rounded-3xl p-6">
                 <p className="max-w-xl text-sm text-slate-tac">
-                  Pings the {list.shortlist.length} pilot{list.shortlist.length > 1 ? "s" : ""} above on WhatsApp and in-app. They have <strong className="text-ivory">10 minutes</strong> to
-                  accept. If nobody accepts, the next-ranked pilot is pinged automatically
+                  Pings the {list.shortlist.length} candidate{list.shortlist.length > 1 ? "s" : ""} above on WhatsApp and in-app. They have <strong className="text-ivory">10 minutes</strong> to
+                  accept. If nobody accepts, the next-ranked candidate is pinged automatically
                   {list.benchCount > 0 ? ` (${list.benchCount} more eligible in reserve)` : ""}.
                 </p>
                 <button type="button" onClick={dispatch} disabled={busy} className={`${primaryBtn} px-8 py-4 text-base`}>{busy ? "Sending…" : "Dispatch 10-Min Confirm Ping"}</button>
@@ -173,7 +180,7 @@ function ExcludedSummary({ list }: { list: Shortlist }) {
   if (list.excludedCount === 0) return null;
   return (
     <details className="glass rounded-2xl p-4 text-sm">
-      <summary className="cursor-pointer text-slate-tac">{list.excludedCount} pilot{list.excludedCount > 1 ? "s were" : " was"} excluded. Why?</summary>
+      <summary className="cursor-pointer text-slate-tac">{list.excludedCount} candidate{list.excludedCount > 1 ? "s were" : " was"} excluded. Why?</summary>
       <ul className="mt-3 space-y-1 text-slate-tac">
         {list.excludedByReason.map((r) => <li key={r.code}><span className="text-ivory">{r.count}</span> · {r.label}</li>)}
       </ul>
@@ -242,12 +249,12 @@ function DispatchStatus({ status, live, reset }: { status: Status; live: boolean
         {filled ? (
           <motion.div key="filled" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <h2 className="font-display text-4xl text-emerald-status">Crew confirmed</h2>
-            <p className="mt-2 text-ivory">{winner?.name ?? "A pilot"} accepted and is now booked for this window.</p>
+            <p className="mt-2 text-ivory">{winner?.name ?? "A crew member"} accepted and is now booked for this window.</p>
           </motion.div>
         ) : (
           <motion.div key="live" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <h2 className="font-display text-3xl text-ivory">Waiting for confirmation…</h2>
-            <p className="mt-1 text-sm text-slate-tac">This updates automatically. You can leave the page: pilots can still accept.</p>
+            <p className="mt-1 text-sm text-slate-tac">This updates automatically. You can leave the page: crew can still accept.</p>
           </motion.div>
         )}
       </AnimatePresence>

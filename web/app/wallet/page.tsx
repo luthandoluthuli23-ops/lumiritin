@@ -4,6 +4,7 @@ import { CalendarSync } from "@/components/pilot/CalendarSync";
 import { CheckRecordsPanel } from "@/components/pilot/CheckRecordsPanel";
 import { CompetenciesPanel } from "@/components/pilot/CompetenciesPanel";
 import { LumiVerifyPanel } from "@/components/pilot/LumiVerifyPanel";
+import { isLumiConfigured } from "@/lib/lumi";
 import { RosterAndPings } from "@/components/pilot/RosterAndPings";
 import { currentState, describeState } from "@/lib/availability";
 import { db } from "@/lib/db";
@@ -108,7 +109,7 @@ export default async function WalletPage() {
             Status: {c.portalStatus ?? "unverified"} · Expires {fmt(c.expiresAt)} ({daysLeft(c.expiresAt)}) · Last
             checked {c.lastVerifiedAt ? c.lastVerifiedAt.toLocaleString("en-ZA") : "never"}
           </p>
-          {(c.type === "PILOT_LICENCE" || c.type === "CABIN_CREW_CERT") && (
+          {isLumiConfigured() && (c.type === "PILOT_LICENCE" || c.type === "CABIN_CREW_CERT") && (
             <LumiVerifyPanel label={c.type === "CABIN_CREW_CERT" ? "your SACAA cabin crew licence" : "your SACAA licence"} />
           )}
           <table>
