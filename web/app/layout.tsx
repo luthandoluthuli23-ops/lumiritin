@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
+import { AssistantWidget } from "@/components/assistant/AssistantWidget";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { Providers } from "@/components/Providers";
+import { isAssistantConfigured } from "@/lib/assistant";
 import { getSession } from "@/lib/session";
 import "./globals.css";
 
@@ -40,6 +42,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <Navbar session={session ? { name: session.name, role: session.role } : null} demoSwitcher={process.env.NODE_ENV !== "production"} />
           <div className="flex-1">{children}</div>
           <Footer />
+          {/* Hidden until ANTHROPIC_API_KEY is set, like the other Lumi features. */}
+          {isAssistantConfigured() && <AssistantWidget role={session?.role ?? null} />}
         </Providers>
       </body>
     </html>
