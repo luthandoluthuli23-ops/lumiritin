@@ -2,7 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { FormError, SelectField, TextField, cardCls, dangerBtn, dangerTextBtn, ghostBtnSm, primaryBtn } from "@/components/ui/Field";
+import { Pill, type PillTone } from "@/components/ui/Pill";
 import { CHECK_TYPES, CHECK_TYPE_LABEL, checkStatus } from "@/lib/checks";
+import { formatDate } from "./format";
 
 export interface CheckRow {
   id: string;
@@ -13,20 +16,16 @@ export interface CheckRow {
   expiresAt: string; // ISO date
 }
 
-const TONE: Record<"green" | "amber" | "red", string> = {
-  green: "bg-emerald-status/15 text-emerald-status",
-  amber: "bg-amber-500/15 text-amber-300",
-  red: "bg-alert/15 text-alert",
-};
-
-const inputCls = "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-ivory outline-none transition placeholder:text-slate-tac/60 focus:border-gold/60";
-const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-ZA", { year: "numeric", month: "short", day: "numeric" });
+const TONE: Record<"green" | "amber" | "red", PillTone> = { green: "ok", amber: "warn", red: "err" };
 
 export function CheckRecordsPanel({ records }: { records: CheckRow[] }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   async function add(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -54,61 +53,60 @@ export function CheckRecordsPanel({ records }: { records: CheckRow[] }) {
       form.reset();
       setAdding(false);
       router.refresh();
+    } catch {
+      setError("Network error. Please try again.");
     } finally {
       setBusy(false);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm("Delete this check record?")) return;
-    await fetch(`/api/pilot/checks/${id}`, { method: "DELETE" });
-    router.refresh();
+    setRemovingId(id);
+    setListError(null);
+    try {
+      const res = await fetch(`/api/pilot/checks/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        setListError("Couldn't remove that check record. Please try again.");
+        return;
+      }
+      setConfirmingId(null);
+      router.refresh();
+    } catch {
+      setListError("Network error. Please try again.");
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   const sorted = [...records].sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
 
   return (
-    <section className="glass rounded-3xl p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl text-ivory">Check records</h2>
-        <button type="button" onClick={() => setAdding((a) => !a)} className="rounded-full border border-white/20 px-4 py-1.5 text-sm text-ivory transition hover:border-gold/60">
+    <section className={cardCls} aria-labelledby="checks-h">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="checks-h" className="font-display text-2xl text-ivory">Check records</h2>
+        <button type="button" onClick={() => setAdding((a) => !a)} className={ghostBtnSm}>
           {adding ? "Close" : "+ Add check"}
         </button>
       </div>
-      <p className="mt-1 text-sm text-slate-tac">Recurrent proficiency and rating checks. Status updates itself from the expiry date.</p>
+      <p className="mt-2 text-sm text-slate-tac">Recurrent proficiency and rating checks. Status updates itself from the expiry date.</p>
 
       {adding && (
-        <form onSubmit={add} className="mt-4 grid gap-3 rounded-2xl bg-white/5 p-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-xs uppercase tracking-widest text-slate-tac">Check type</span>
-            <select name="checkType" required defaultValue="PPC" className={inputCls}>
-              {CHECK_TYPES.map((c) => (
-                <option key={c.code} value={c.code}>{c.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs uppercase tracking-widest text-slate-tac">Aircraft type</span>
-            <input name="aircraftType" required placeholder="e.g. H125" className={inputCls} />
-          </label>
-          <label className="block">
-            <span className="text-xs uppercase tracking-widest text-slate-tac">Date completed</span>
-            <input name="completedAt" type="date" required className={inputCls} />
-          </label>
-          <label className="block">
-            <span className="text-xs uppercase tracking-widest text-slate-tac">Examiner (DFE)</span>
-            <input name="examiner" required placeholder="Examiner name" className={inputCls} />
-          </label>
-          <label className="block">
-            <span className="text-xs uppercase tracking-widest text-slate-tac">Expiry date</span>
-            <input name="expiresAt" type="date" required className={inputCls} />
-          </label>
-          <div className="flex items-end">
-            <button type="submit" disabled={busy} className="rounded-xl bg-gold px-5 py-2 text-sm font-semibold text-obsidian transition hover:bg-gold-light disabled:opacity-60">
+        <form onSubmit={add} className="mt-4 grid gap-4 rounded-2xl bg-white/5 p-4 sm:grid-cols-2">
+          <SelectField label="Check type" name="checkType" required defaultValue="PPC">
+            {CHECK_TYPES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </SelectField>
+          <TextField label="Aircraft type" name="aircraftType" required placeholder="e.g. H125" />
+          <TextField label="Date completed" name="completedAt" type="date" required />
+          <TextField label="Examiner (DFE)" name="examiner" required placeholder="Examiner name" />
+          <TextField label="Expiry date" name="expiresAt" type="date" required />
+          <div className="sm:col-span-2">
+            <button type="submit" disabled={busy} className={`${primaryBtn} w-full sm:w-auto`}>
               {busy ? "Saving…" : "Save check"}
             </button>
           </div>
-          {error && <p className="sm:col-span-2 text-sm text-alert">{error}</p>}
+          <div className="empty:hidden sm:col-span-2"><FormError message={error} /></div>
         </form>
       )}
 
@@ -118,23 +116,38 @@ export function CheckRecordsPanel({ records }: { records: CheckRow[] }) {
         <ul className="mt-4 divide-y divide-white/10">
           {sorted.map((r) => {
             const st = checkStatus(new Date(r.expiresAt));
+            const name = CHECK_TYPE_LABEL[r.checkType] ?? r.checkType;
             return (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div className="min-w-[12rem]">
-                  <p className="text-ivory">
-                    {CHECK_TYPE_LABEL[r.checkType] ?? r.checkType} <span className="text-slate-tac">· {r.aircraftType}</span>
-                  </p>
-                  <p className="text-xs text-slate-tac">Completed {fmt(r.completedAt)} · {r.examiner} · expires {fmt(r.expiresAt)}</p>
+              <li key={r.id} className="py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1 basis-48">
+                    <p className="break-words text-ivory">
+                      {name} <span className="text-slate-tac">· {r.aircraftType}</span>
+                    </p>
+                    <p className="break-words text-xs text-slate-tac">Completed {formatDate(r.completedAt)} · {r.examiner} · expires {formatDate(r.expiresAt)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Pill tone={TONE[st.tone]} className="whitespace-nowrap">{st.label}</Pill>
+                    {confirmingId !== r.id && (
+                      <button type="button" onClick={() => { setConfirmingId(r.id); setListError(null); }} aria-label={`Remove ${name} check for ${r.aircraftType}`} className={dangerTextBtn}>Remove</button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${TONE[st.tone]}`}>{st.label}</span>
-                  <button type="button" onClick={() => remove(r.id)} className="text-sm text-slate-tac transition hover:text-alert">Remove</button>
-                </div>
+                {confirmingId === r.id && (
+                  <div role="group" aria-label="Confirm removal" className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-alert/10 p-3">
+                    <p className="text-sm text-ivory">Remove this check record?</p>
+                    <div className="flex flex-wrap gap-3">
+                      <button type="button" onClick={() => setConfirmingId(null)} disabled={removingId === r.id} className={ghostBtnSm} autoFocus>Keep</button>
+                      <button type="button" onClick={() => remove(r.id)} disabled={removingId === r.id} className={dangerBtn}>{removingId === r.id ? "Removing…" : "Remove"}</button>
+                    </div>
+                  </div>
+                )}
               </li>
             );
           })}
         </ul>
       )}
+      <div className="mt-3 empty:hidden"><FormError message={listError} /></div>
     </section>
   );
 }

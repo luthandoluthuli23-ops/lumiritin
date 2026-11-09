@@ -21,6 +21,19 @@ export default async function SigninPage({ searchParams }: { searchParams: Promi
         New to Lumiritin?{" "}
         <Link href="/auth/signup" className="text-gold-light underline underline-offset-4">Create an account</Link>
       </p>
+
+      <div className="mt-8 rounded-2xl border border-gold/25 bg-gold/5 p-4">
+        <p className="text-sm font-medium text-ivory">Just want to test it first?</p>
+        <p className="mt-1 text-xs text-slate-tac">
+          Try our AI concierge Lumi on a licence, logbook or AOC — no account, nothing saved.
+        </p>
+        <Link
+          href="/try-lumi"
+          className="mt-3 inline-flex items-center rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light pointer-coarse:min-h-11"
+        >
+          Try Lumi →
+        </Link>
+      </div>
     </main>
   );
 }

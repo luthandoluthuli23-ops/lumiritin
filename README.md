@@ -60,7 +60,7 @@ lumiritin/
 
 ### API routes (`web/app/api/`)
 
-`auth/{signup,signin,signout,demo}` · `charter/quote` · `empty-legs` (+ `[id]/bookings`) · `aircraft` · `crew-requests` (+ `[id]/{shortlist,dispatch,status}`) · `crew-pings/[token]` · `operator/roster` (+ `[id]`, `[id]/book`) · `pilot/{availability,calendar-sync,roster}` · `verify`
+`auth/{signup,signin,signout,demo}` · `charter/quote` · `empty-legs` (+ `[id]/bookings`) · `aircraft` · `crew-requests` (+ `[id]/{shortlist,dispatch,status}`) · `crew-pings/[token]` · `operator/roster` (+ `[id]`, `[id]/book`) · `pilot/{availability,calendar-sync,roster}` · `logbook/{entries,import,scan}` · `logbook/connect/[provider]` (+ `callback`, `sync`) · `lumi/*` · `verify`
 
 ## Getting started
 
@@ -114,6 +114,14 @@ In development the navbar shows a **"Demo as" switcher** (Passenger / Operator /
 
 **Reciprocal pool.** A pilot on another operator's roster is only reachable if that operator offers them to the pool *and* the requesting operator offers at least one of its own pilots. Pilots must accept a roster invitation before an operator can see or control their availability.
 
+**Site assistant ("Ask Lumi").** A floating chat on every page answers aviation questions and helps people use the site, and can take them to the right page with the form pre-filled (`/charter?from=FACT&to=FALA&date=...`). It runs on the smallest model tier (`LUMI_CHAT_MODEL`, default `claude-haiku-5-5`) using `ANTHROPIC_API_KEY`, and is hidden when that key is unset. It can only read (airfield lookup, open empty legs) and navigate to a fixed allowlist of pages (`lib/assistant-core.ts`, checked against the visitor's role); it never books, pays or submits anything. `POST /api/assistant` is same-origin only and rate limited (20 messages / 10 min and 150 / day per visitor, 600 / hour overall). Code: `lib/assistant.ts` (model loop + tools), `app/api/assistant/route.ts`, `components/assistant/AssistantWidget.tsx` (mounted in `app/layout.tsx`).
+
+**Logbook connection (MyFlightbook).** A pilot can pull their flights from MyFlightbook instead of uploading a file. `GET /api/logbook/connect/myflightbook` sends them to MyFlightbook's "Allow access" page; the callback swaps the one-time code for tokens (stored AES-256-GCM encrypted in `external_connection`, key derived from `SESSION_SECRET`) and imports. Flights are matched on MyFlightbook's `FlightID` (`flight_log_entry.externalSource` / `externalId`), so **Sync now** creates what is new, updates what changed and removes what the pilot deleted there, and never touches manual / CSV / Lumi / platform rows. An empty or failed fetch never deletes anything. Set `MYFLIGHTBOOK_CLIENT_ID` / `MYFLIGHTBOOK_CLIENT_SECRET` (see `.env.example`); the callback URL registered with MyFlightbook must be exactly `<APP_BASE_URL>/api/logbook/connect/myflightbook/callback`. Protocol code is in `lib/myflightbook/` (pure, unit-tested), the database sync in `lib/logbook-sync.ts`.
+
+## Tests
+
+`cd web && npm test` runs the unit tests (Node's built-in runner via `tsx`, no extra dependencies): the MyFlightbook protocol client, mapping, encryption and OAuth-state checks.
+
 ## Scheduled jobs
 
 Run from cron, Task Scheduler, or a GitHub Actions schedule, from `web/`:
@@ -135,8 +143,10 @@ Deploy **only the `web/` app**. Do not import `verifier/` (Python) and do not us
    - `DATABASE_URL`: the pooled connection string
    - `SESSION_SECRET`: a **new** random 32+ character value (not the one from your local `.env`)
    - `APP_BASE_URL`: your deployed URL, e.g. `https://lumiritin.vercel.app`
+   - `MYFLIGHTBOOK_CLIENT_ID`, `MYFLIGHTBOOK_CLIENT_SECRET` (logbook connection), `ANTHROPIC_API_KEY` (Lumi document reading), `CRON_SECRET` (expiry-reminder cron)
    - optional: `NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164`, `WHATSAPP_*`, `SACAA_*`
-4. **Create the schema and reference data once**, from your own machine, pointing at the production database (use the provider's *direct*, non-pooled URL for migrations):
+   - register `https://<your-domain>/api/logbook/connect/myflightbook/callback` as a callback for the MyFlightbook client
+4. **Create the schema and reference data once**, from your own machine, pointing at the production database (use the provider's *direct*, non-pooled URL for migrations). Migrations are plain idempotent SQL, so you can also paste them, in folder order, into the Supabase SQL editor. **Apply the database changes before deploying code that needs them.**
    ```bash
    cd web
    DATABASE_URL="<direct url>" npx prisma migrate deploy
@@ -177,7 +187,8 @@ These are real and affect what you can trust:
 - **WhatsApp** templates (`credential_expiry_reminder`, `crew_request_ping`) need Meta approval before real messages send.
 - **Airfields:** only seven are seeded (FAPM, FALA, FACT, FAOR, FADN, FAKN, FAPE). Add more rows to extend routes and charter quotes.
 - **Medical class rule** (Class 1 required) should be confirmed against current SACAA requirements.
-- **Tests:** the Python verifier has a pytest suite. The web engines were verified with ad hoc scripts that are not committed yet, so there is no JS test suite in CI.
+- **Tests:** the Python verifier has a pytest suite, and `web/` has unit tests for the logbook connection (`npm test`). The matching/cascade engines were verified with ad hoc scripts that are not committed, and there is no CI yet.
+- **MyFlightbook live check:** the connection was built from MyFlightbook's wiki and server source and tested end to end against a faithful fake. The token response field names, the wire format of `Date` and the exact meaning of `Landings` / `FullStopLandings` / `NightLandings` are not stated in their docs; confirm them on the first real flight (`MYFLIGHTBOOK_DEBUG=1`). MyFlightbook asks developers not to test against the live site; ask them for a staging server.
 - Recurring (RRULE) calendar events are not expanded; the UI tells the pilot when any were skipped.
 - Charter references (`LUM-2026-X981`) allow about 22,000 per year; the format needs a longer suffix at volume.
 

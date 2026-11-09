@@ -9,7 +9,7 @@
 // advanceCascade() is idempotent and is called from every place that can notice time passing: the operator's
 // status polling, a pilot's response, and jobs/cascade-tick.ts (run it every minute from cron for full coverage).
 import { randomBytes } from "node:crypto";
-import type { CrewRequest, Prisma } from "@prisma/client";
+import type { CrewRequest, CredentialType, CrewRole, Prisma } from "@prisma/client";
 import { db } from "./db";
 import { resolveState } from "./availability";
 import { benchEarningZar } from "./bench";
@@ -27,13 +27,22 @@ type RequestRow = CrewRequest;
 
 // ─── Candidate loading and ranking ──────────────────────────────────────────
 
-async function loadCandidates(client: Tx | typeof db, now: Date): Promise<CandidateInput[]> {
+/** The credential type that matters for each crew role (cabin crew carry a cabin-crew cert, not a pilot licence). */
+const CRED_TYPE_FOR_ROLE: Record<CrewRole, CredentialType> = {
+  PILOT: "PILOT_LICENCE",
+  CABIN_CREW: "CABIN_CREW_CERT",
+  AME: "AME_LICENCE",
+  GROUND_CREW: "OTHER",
+};
+
+async function loadCandidates(client: Tx | typeof db, now: Date, role: CrewRole): Promise<CandidateInput[]> {
   const people = await client.person.findMany({
-    where: { role: "PILOT" },
+    where: { role },
     include: {
-      credentials: { where: { type: "PILOT_LICENCE" }, include: { ratings: true }, take: 1 },
+      credentials: { where: { type: CRED_TYPE_FOR_ROLE[role] }, include: { ratings: true }, take: 1 },
       medicals: true,
       logbook: { select: { totalHours: true } },
+      flightLog: { select: { totalHours: true } },
       availability: { where: { endsAt: { gt: new Date(now.getTime() - 86_400_000) } } },
       rosterEntries: { where: { status: "ACTIVE" }, select: { operatorId: true, sharedToPool: true } },
     },
@@ -51,10 +60,14 @@ async function loadCandidates(client: Tx | typeof db, now: Date): Promise<Candid
       travelRadiusKm: p.travelRadiusKm,
       ratings: (cred?.ratings ?? []).map((r) => ({ name: r.name, source: r.source, expiresAt: r.expiresAt })),
       licence: cred
-        ? { expiresAt: cred.expiresAt, portalStatus: cred.portalStatus, lastVerificationResult: cred.lastVerificationResult, lastVerifiedAt: cred.lastVerifiedAt }
+        ? { expiresAt: cred.expiresAt, portalStatus: cred.portalStatus, lastVerificationResult: cred.lastVerificationResult, lastVerificationMethod: cred.lastVerificationMethod, lastVerifiedAt: cred.lastVerifiedAt }
         : null,
       medicals: p.medicals.map((m) => ({ class: m.class, expiresAt: m.expiresAt })),
-      totalHours: p.logbook ? Number(p.logbook.totalHours) : null,
+      // Grand total = opening balance (LogbookSummary) + every logged flight (platform, imported, manual).
+      totalHours:
+        p.logbook || p.flightLog.length > 0
+          ? Number(p.logbook?.totalHours ?? 0) + p.flightLog.reduce((s, e) => s + Number(e.totalHours), 0)
+          : null,
       windows: p.availability.map((a) => ({ state: a.state, startsAt: a.startsAt, endsAt: a.endsAt })),
       rosterOperatorIds: p.rosterEntries.map((r) => r.operatorId),
       sharedToPool: p.rosterEntries.some((r) => r.sharedToPool),
@@ -64,12 +77,13 @@ async function loadCandidates(client: Tx | typeof db, now: Date): Promise<Candid
 
 export async function rankForRequest(request: RequestRow, client: Tx | typeof db = db, now: Date = new Date()): Promise<MatchResult> {
   const [candidates, departure, contributes] = await Promise.all([
-    loadCandidates(client, now),
+    loadCandidates(client, now, request.role),
     client.airfield.findUnique({ where: { icao: request.departureIcao }, select: { lat: true, lng: true } }),
     client.crewRoster.count({ where: { operatorId: request.operatorId, status: "ACTIVE", sharedToPool: true } }),
   ]);
   const req: MatchRequest = {
     operatorId: request.operatorId,
+    role: request.role,
     requiredTypes: request.requiredRatings,
     departure,
     startsAt: request.startsAt,

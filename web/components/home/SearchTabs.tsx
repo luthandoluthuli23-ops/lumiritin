@@ -32,7 +32,7 @@ export function SearchTabs() {
             aria-selected={tab === t.id}
             aria-controls={`panel-${t.id}`}
             onClick={() => setTab(t.id)}
-            className={`relative flex-1 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${tab === t.id ? "text-obsidian" : "text-slate-tac hover:text-ivory"}`}
+            className={`relative flex-1 rounded-xl px-3 py-2.5 text-sm font-medium leading-tight transition-colors sm:whitespace-nowrap sm:px-4 pointer-coarse:min-h-11 ${tab === t.id ? "text-obsidian" : "text-slate-tac hover:text-ivory"}`}
           >
             {tab === t.id && (
               <motion.span layoutId="tab-pill" transition={{ duration: 0.45, ease: EASE_LUXE }} className="absolute inset-0 rounded-xl bg-gold" />

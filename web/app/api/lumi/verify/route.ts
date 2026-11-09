@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { sendCredentialVerifiedEmail } from "@/lib/email";
 import { extractFromDocument, isLumiConfigured, LUMI_ACCEPTED_MEDIA, type LumiDocKind } from "@/lib/lumi";
 import { isRateLimited } from "@/lib/rate-limit";
 import { getPilotPersonId } from "@/lib/session";
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     where: { id: personId },
     select: {
       fullName: true,
+      email: true,
       credentials: {
         where: { type: { in: ["PILOT_LICENCE", "CABIN_CREW_CERT"] } },
         select: { id: true, type: true, licenceNumber: true },
@@ -77,6 +79,17 @@ export async function POST(req: NextRequest) {
     expectedName: person.fullName,
     declaredLicence: cred.licenceNumber,
   });
+
+  // Confirmation email on a successful verification (safe no-op until email is configured).
+  if (applied.verified) {
+    await sendCredentialVerifiedEmail({
+      to: person.email,
+      name: person.fullName,
+      credential: cred.type === "CABIN_CREW_CERT" ? "cabin crew licence" : "pilot licence",
+      method: "LUMI_DOCUMENT",
+      expires: result.extraction.expires,
+    });
+  }
 
   return NextResponse.json({
     ok: true,

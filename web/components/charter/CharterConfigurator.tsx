@@ -138,7 +138,7 @@ export function CharterConfigurator({ airfields, today, initial, contact }: Prop
         {/* 1. Trip */}
         <section aria-labelledby="s-trip">
           <h2 id="s-trip" className="mb-4 font-display text-3xl text-ivory"><span className="text-gold">01</span> Your trip</h2>
-          <div role="tablist" aria-label="Trip type" className="relative inline-flex gap-1 rounded-2xl bg-obsidian-800 p-1">
+          <div role="tablist" aria-label="Trip type" className="relative flex w-full gap-1 rounded-2xl bg-obsidian-800 p-1 sm:inline-flex sm:w-auto">
             {TRIP_TYPES.map((t) => (
               <button
                 key={t.id}
@@ -146,7 +146,7 @@ export function CharterConfigurator({ airfields, today, initial, contact }: Prop
                 role="tab"
                 aria-selected={tripType === t.id}
                 onClick={() => changeTrip(t.id)}
-                className={`relative rounded-xl px-5 py-2 text-sm font-medium transition-colors ${tripType === t.id ? "text-obsidian" : "text-slate-tac hover:text-ivory"}`}
+                className={`relative flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-sm font-medium transition-colors sm:flex-none sm:px-5 pointer-coarse:min-h-11 ${tripType === t.id ? "text-obsidian" : "text-slate-tac hover:text-ivory"}`}
               >
                 {tripType === t.id && <motion.span layoutId="trip-pill" className="absolute inset-0 rounded-xl bg-gold" transition={{ type: "spring", stiffness: 380, damping: 32 }} />}
                 <span className="relative">{t.label}</span>
@@ -308,13 +308,13 @@ function ClassCard({ spec, selected, result, pax, onSelect }: { spec: AircraftCl
 const Spec = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-xl bg-white/5 px-2 py-2">
     <dd className="text-sm font-medium text-ivory">{value}</dd>
-    <dt className="text-[10px] uppercase tracking-widest text-slate-tac">{label}</dt>
+    <dt className="text-xs uppercase tracking-widest text-slate-tac">{label}</dt>
   </div>
 );
 
 function Stepper({ label, children, ...props }: { label: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" aria-label={label} {...props} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-xl text-ivory transition hover:border-gold/60 disabled:opacity-30">
+    <button type="button" aria-label={label} {...props} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 pointer-coarse:h-11 pointer-coarse:w-11 text-xl text-ivory transition hover:border-gold/60 disabled:opacity-30">
       {children}
     </button>
   );

@@ -174,7 +174,7 @@ function Field({ label, inputRef, ...props }: { label: string; inputRef?: React.
 
 function Step({ label, children, ...props }: { label: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" aria-label={label} {...props} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-xl text-ivory transition hover:border-gold/60 disabled:opacity-30">
+    <button type="button" aria-label={label} {...props} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 pointer-coarse:h-11 pointer-coarse:w-11 text-xl text-ivory transition hover:border-gold/60 disabled:opacity-30">
       {children}
     </button>
   );

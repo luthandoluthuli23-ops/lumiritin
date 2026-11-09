@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Alert } from "@/components/ui/Alert";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { cardCls, pageCls, rowCardCls } from "@/components/ui/Field";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { formatZar } from "@/lib/empty-legs-shared";
 import { pilotReputation } from "@/lib/insights";
 import { getPilotPersonId, requireRole } from "@/lib/session";
@@ -15,8 +19,8 @@ export default async function PilotInsightsPage() {
   const personId = await getPilotPersonId();
   if (!personId) {
     return (
-      <main className="mx-auto max-w-3xl px-6 pb-16 pt-28">
-        <p className="text-slate-tac">Finish setting up your pilot profile to start building your reputation.</p>
+      <main className={pageCls}>
+        <EmptyState title="No profile yet">Finish setting up your pilot profile to start building your reputation.</EmptyState>
       </main>
     );
   }
@@ -42,37 +46,36 @@ export default async function PilotInsightsPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-6 pb-16 pt-28">
-      <p className="mb-4 text-sm"><Link href="/wallet" className="text-gold-light underline underline-offset-4">← Credential wallet</Link></p>
-      <h1 className="font-display text-5xl text-ivory">My reputation</h1>
-      <p className="mt-2 text-slate-tac">Your standing with operators, built from how you respond, your credentials and your flying.</p>
+    <main className={pageCls}>
+      <p className="mb-6 text-sm"><Link href="/wallet" className="text-gold-light underline underline-offset-4">← Credential wallet</Link></p>
+      <PageHeader title="My reputation" subtitle="Your standing with operators, built from how you respond, your credentials and your flying." />
 
-      <div className="glass mt-8 flex flex-wrap items-center gap-8 rounded-3xl p-8">
+      <div className={`${cardCls} mt-8 flex flex-wrap items-center gap-6 sm:gap-8 sm:p-8`}>
         <div className="flex flex-col items-center gap-3">
           <ReputationRing score={rep.score} tier={rep.tier} size={128} />
           <TierBadge tier={rep.tier} />
         </div>
         <div className="min-w-[14rem] flex-1">
           <ComponentBars components={rep.components} />
-          {!s.medicalValid && <p className="mt-4 rounded-lg bg-alert/10 px-3 py-2 text-sm text-alert">No valid medical on file — this limits your matches.</p>}
+          {!s.medicalValid && <Alert tone="warn" className="mt-4">No valid medical on file — this limits your matches.</Alert>}
         </div>
       </div>
 
-      <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {stats.map((st) => (
-          <div key={st.label} className="glass rounded-2xl p-4 text-center">
+          <div key={st.label} className={`${rowCardCls} text-center`}>
             <dd className="font-display text-3xl text-gold-gradient">{st.value}</dd>
-            <dt className="mt-1 text-[10px] uppercase tracking-widest text-slate-tac">{st.label}</dt>
+            <dt className="mt-1 break-words text-xs uppercase tracking-wide text-slate-tac">{st.label}</dt>
           </div>
         ))}
       </dl>
 
       {tips.length > 0 && (
-        <section className="glass mt-6 rounded-3xl p-6">
-          <h2 className="font-display text-2xl text-ivory">Grow your score</h2>
+        <section aria-labelledby="tips-h" className={`${cardCls} mt-6`}>
+          <h2 id="tips-h" className="font-display text-2xl text-ivory">Grow your score</h2>
           <ul className="mt-3 space-y-2 text-sm text-slate-tac">
             {tips.map((t) => (
-              <li key={t} className="flex gap-2"><span className="text-gold">→</span>{t}</li>
+              <li key={t} className="flex gap-2"><span className="text-gold" aria-hidden>→</span>{t}</li>
             ))}
           </ul>
         </section>

@@ -75,7 +75,7 @@ export function FlightCard({ leg, onRequest }: Props) {
               type="button"
               disabled={soldOut}
               onClick={() => onRequest(leg)}
-              className="rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-light disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-slate-tac"
+              className="rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian pointer-coarse:min-h-11 transition hover:bg-gold-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-light disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-slate-tac"
             >
               Request seats
             </button>

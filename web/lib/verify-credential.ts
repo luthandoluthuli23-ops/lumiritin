@@ -47,6 +47,7 @@ export async function verifyCredential(credentialId: string): Promise<VerifyResu
           expiresAt: toDate(r.expires) ?? undefined,
           lastVerifiedAt: now,
           lastVerificationResult: "VERIFIED",
+          lastVerificationMethod: "SACAA_PORTAL",
         },
       });
       for (const rt of r.ratings) {
@@ -164,6 +165,7 @@ export async function applyLumiExtraction(
         expiresAt: toDate(extraction.expires) ?? undefined,
         lastVerifiedAt: now,
         lastVerificationResult: "VERIFIED",
+        lastVerificationMethod: "LUMI_DOCUMENT",
       },
     });
     for (const rt of extraction.ratings) {

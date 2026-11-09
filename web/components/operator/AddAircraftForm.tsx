@@ -44,16 +44,16 @@ export function AddAircraftForm({ airfields }: { airfields: AirfieldOption[] }) 
   }
 
   return (
-    <form onSubmit={submit} className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      <TextField label="Registration" name="registration" required placeholder="ZS-PRV" pattern="[Zz][SsUu]-[A-Za-z]{3}" title="e.g. ZS-PRV" />
-      <TextField label="ICAO type" name="typeDesignator" required placeholder="C525" maxLength={4} hint="e.g. C525, E55P, PC12" />
+    <form onSubmit={submit} className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <TextField label="Registration" name="registration" required autoCapitalize="characters" placeholder="ZS-PRV" pattern="[Zz][SsUu]-[A-Za-z]{3}" title="e.g. ZS-PRV" />
+      <TextField label="ICAO type" name="typeDesignator" required autoCapitalize="characters" placeholder="C525" maxLength={4} hint="e.g. C525, E55P, PC12" />
       <AirfieldAutocomplete airfields={airfields} value={base} onChange={setBase} label="Base airfield" required />
-      <TextField label="Passenger seats" name="seatCapacity" type="number" min={1} max={19} defaultValue={6} required />
-      <TextField label="Hourly rate (ZAR)" name="hourlyRateZar" type="number" min={1000} step={100} required placeholder="45000" />
+      <TextField label="Passenger seats" name="seatCapacity" type="number" inputMode="numeric" min={1} max={19} defaultValue={6} required />
+      <TextField label="Hourly rate (ZAR)" name="hourlyRateZar" type="number" inputMode="numeric" min={1000} step={100} required placeholder="45000" />
       <div className="flex items-end">
         <button type="submit" disabled={busy} className={`${primaryBtn} w-full`}>{busy ? "Adding…" : "Add aircraft"}</button>
       </div>
-      <div className="sm:col-span-2 lg:col-span-3"><FormError message={error} /></div>
+      {error && <div className="sm:col-span-2 lg:col-span-3"><FormError message={error} /></div>}
     </form>
   );
 }

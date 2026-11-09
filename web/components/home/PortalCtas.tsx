@@ -15,7 +15,7 @@ const PORTALS = [
   {
     eyebrow: "Operators",
     title: "Fill every sector",
-    body: "Manage your fleet, post urgent crew requests and match SACAA-verified pilots in minutes.",
+    body: "Manage your fleet, post urgent crew requests and match SACAA-verified flight and cabin crew in minutes.",
     cta: "Open operator portal",
     href: "/operator/dashboard",
   },

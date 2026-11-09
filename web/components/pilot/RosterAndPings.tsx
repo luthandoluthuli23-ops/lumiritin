@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ghostBtn, primaryBtn } from "@/components/ui/Field";
+import { FormError, apiErrorMessage, cardCls, ghostBtnSm, primaryBtn, primaryBtnSm } from "@/components/ui/Field";
 
 export interface RosterRow {
   id: string;
@@ -24,12 +24,20 @@ export interface PendingPing {
 export function RosterAndPings({ roster, pings }: { roster: RosterRow[]; pings: PendingPing[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function act(id: string, action: "accept" | "decline" | "leave") {
     setBusy(id);
+    setError(null);
     try {
-      await fetch("/api/pilot/roster", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action }) });
+      const res = await fetch("/api/pilot/roster", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action }) });
+      if (!res.ok) {
+        setError(apiErrorMessage(await res.json().catch(() => null)));
+        return;
+      }
       router.refresh();
+    } catch {
+      setError("Network error. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -40,16 +48,16 @@ export function RosterAndPings({ roster, pings }: { roster: RosterRow[]; pings: 
   return (
     <div className="space-y-6">
       {pings.length > 0 && (
-        <section className="glass rounded-3xl border border-gold/50 p-6 shadow-gold" aria-labelledby="pings-h">
-          <h2 id="pings-h" className="font-display text-2xl text-gold-light">Crew requests waiting for you</h2>
+        <section className={`${cardCls} border border-gold/50 shadow-gold`} aria-labelledby="pings-h">
+          <h2 id="pings-h" className="font-display text-2xl text-ivory">Crew requests waiting for you</h2>
           <ul className="mt-4 space-y-3">
             {pings.map((p) => (
-              <li key={p.token} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/5 p-4">
-                <div>
-                  <p className="text-ivory">{p.operatorName} · {p.departureIcao} · {p.types}</p>
+              <li key={p.token} className="flex flex-col gap-3 rounded-2xl bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="break-words text-ivory">{p.operatorName} · {p.departureIcao} · {p.types}</p>
                   <p className="text-xs text-slate-tac">{p.window} · about {Math.max(1, Math.ceil(p.secondsLeft / 60))} min left to respond</p>
                 </div>
-                <Link href={`/crew/respond/${p.token}`} className={primaryBtn}>Review &amp; respond</Link>
+                <Link href={`/crew/respond/${p.token}`} className={`${primaryBtn} shrink-0 text-center`}>Review &amp; respond</Link>
               </li>
             ))}
           </ul>
@@ -57,13 +65,13 @@ export function RosterAndPings({ roster, pings }: { roster: RosterRow[]; pings: 
       )}
 
       {roster.length > 0 && (
-        <section className="glass rounded-3xl p-6" aria-labelledby="roster-h">
-          <h2 id="roster-h" className="text-xs uppercase tracking-[0.25em] text-slate-tac">Operators you are rostered with</h2>
+        <section className={cardCls} aria-labelledby="roster-h">
+          <h2 id="roster-h" className="font-display text-2xl text-ivory">Operators you are rostered with</h2>
           <ul className="mt-4 space-y-3">
             {roster.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/5 p-4">
-                <div>
-                  <p className="text-ivory">{r.operatorName}</p>
+              <li key={r.id} className="flex flex-col gap-3 rounded-2xl bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="break-words text-ivory">{r.operatorName}</p>
                   <p className="text-xs text-slate-tac">
                     {r.status === "INVITED"
                       ? "Invitation: accepting lets this operator see your availability and mark you busy for their own flights."
@@ -72,14 +80,14 @@ export function RosterAndPings({ roster, pings }: { roster: RosterRow[]; pings: 
                         : "Active. Only this operator can request you."}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
                   {r.status === "INVITED" ? (
                     <>
-                      <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "accept")} className={primaryBtn}>Accept</button>
-                      <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "decline")} className={ghostBtn}>Decline</button>
+                      <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "accept")} className={primaryBtnSm}>Accept</button>
+                      <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "decline")} className={ghostBtnSm}>Decline</button>
                     </>
                   ) : (
-                    <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "leave")} className={ghostBtn}>Leave roster</button>
+                    <button type="button" disabled={busy === r.id} onClick={() => act(r.id, "leave")} className={ghostBtnSm}>Leave roster</button>
                   )}
                 </div>
               </li>
@@ -87,6 +95,7 @@ export function RosterAndPings({ roster, pings }: { roster: RosterRow[]; pings: 
           </ul>
         </section>
       )}
+      <FormError message={error} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AvailabilityPanel } from "@/components/pilot/AvailabilityPanel";
 import { CalendarSync } from "@/components/pilot/CalendarSync";
@@ -5,11 +6,21 @@ import { CheckRecordsPanel } from "@/components/pilot/CheckRecordsPanel";
 import { CompetenciesPanel } from "@/components/pilot/CompetenciesPanel";
 import { LumiVerifyPanel } from "@/components/pilot/LumiVerifyPanel";
 import { RosterAndPings } from "@/components/pilot/RosterAndPings";
+import { formatDate, formatDateTime } from "@/components/pilot/format";
+import { h1 } from "@/components/pilot/logbook-shared";
+import { cardCls, ghostBtnSm, pageCls } from "@/components/ui/Field";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Pill, type PillTone } from "@/components/ui/Pill";
 import { currentState, describeState } from "@/lib/availability";
+import { checkStatus } from "@/lib/checks";
 import { db } from "@/lib/db";
 import { formatWindow } from "@/lib/empty-legs-shared";
+import { isLumiConfigured } from "@/lib/lumi";
+import { rollUp, syncPlatformFlights } from "@/lib/logbook";
 import { requireRole } from "@/lib/session";
 
+export const metadata: Metadata = { title: "Credential wallet — Lumiritin" };
 export const dynamic = "force-dynamic";
 
 /** The signed-in pilot's own record (middleware already restricts /wallet to pilots; this re-checks). */
@@ -33,23 +44,40 @@ async function currentPerson() {
   });
 }
 
-const fmt = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "—");
+const STATUS_TONE: Record<"green" | "amber" | "red", PillTone> = { green: "ok", amber: "warn", red: "err" };
 
-function daysLeft(d: Date | null): string {
-  if (!d) return "";
-  const days = Math.round((d.getTime() - Date.now()) / 86_400_000);
-  return days < 0 ? "expired" : `${days} days`;
+/** An expiry date with its status pill (the same Current / Due in Nd / Expired logic as the check records). */
+function Expiry({ date }: { date: Date | null }) {
+  if (!date) return <>—</>;
+  const st = checkStatus(date);
+  return (
+    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span className="whitespace-nowrap">{formatDate(date)}</span>
+      <Pill tone={STATUS_TONE[st.tone]} className="whitespace-nowrap">{st.label}</Pill>
+      {st.status === "CURRENT" && <span className="whitespace-nowrap text-slate-tac">{st.daysLeft} days left</span>}
+    </span>
+  );
 }
+
+const labelCls = "text-xs uppercase tracking-widest text-slate-tac";
 
 export default async function WalletPage() {
   const person = await currentPerson();
   if (!person) {
     return (
-      <main className="plain-page mx-auto max-w-3xl px-6 pb-16 pt-28">
-        <p>No profile yet. Onboarding (licence number, home airfield, radius) goes here.</p>
+      <main className={pageCls}>
+        <EmptyState title="No profile yet">Finish setting up your pilot profile to see your credentials here.</EmptyState>
       </main>
     );
   }
+
+  // Same totals as the logbook page: the opening balance plus every logged flight (platform flights are logged first).
+  await syncPlatformFlights(person.id);
+  const entries = await db.flightLogEntry.findMany({
+    where: { personId: person.id },
+    select: { date: true, totalHours: true, picHours: true, nightHours: true, instrumentHours: true, multiEngineHours: true, turbineHours: true },
+  });
+  const totals = rollUp(person.logbook, entries);
 
   const state = currentState(person.availability.map((a) => ({ state: a.state, startsAt: a.startsAt, endsAt: a.endsAt })));
   const blockedPeriods = person.availability.filter((a) => a.source === "ICAL").length;
@@ -60,17 +88,15 @@ export default async function WalletPage() {
   } catch {}
 
   return (
-    <main className="mx-auto max-w-3xl px-6 pb-16 pt-28">
-      <div className="plain-page">
-        <h1>{person.fullName}</h1>
-        <p>
-          Home airfield: {person.homeAirfieldIcao ?? "—"} · Travel radius:{" "}
-          {person.travelRadiusKm ? `${person.travelRadiusKm} km` : "—"}
-        </p>
-        <p><Link href="/wallet/insights" className="text-gold-light underline underline-offset-4">View my reputation →</Link></p>
-      </div>
+    <main className={pageCls}>
+      <PageHeader
+        eyebrow="Credential wallet"
+        title={person.fullName}
+        subtitle={`Home airfield: ${person.homeAirfieldIcao ?? "—"} · Travel radius: ${person.travelRadiusKm ? `${person.travelRadiusKm} km` : "—"}`}
+        action={<Link href="/wallet/insights" className={ghostBtnSm}>View my reputation →</Link>}
+      />
 
-      <div className="my-8 space-y-6">
+      <div className="mt-10 space-y-6">
         <RosterAndPings
           roster={person.rosterEntries.map((r) => ({ id: r.id, operatorName: r.operator.name, status: r.status, sharedToPool: r.sharedToPool }))}
           pings={person.pings.map((p) => ({
@@ -95,53 +121,91 @@ export default async function WalletPage() {
           }))}
         />
         <CalendarSync connected={connected} host={icalHost} syncedAt={person.icalSyncedAt?.toISOString() ?? null} lastError={person.icalLastError} blockedPeriods={blockedPeriods} />
-      </div>
 
-      <div className="plain-page">
+        {person.credentials.map((c) => (
+          <section key={c.id} aria-labelledby={`cred-${c.id}`} className={cardCls}>
+            <h2 id={`cred-${c.id}`} className="break-words font-display text-2xl text-ivory">
+              {c.type === "CABIN_CREW_CERT" ? "Cabin crew licence" : c.licenceCategory ?? "Licence"} {c.licenceNumber}
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+              <div>
+                <dt className={labelCls}>Status</dt>
+                <dd className="mt-1 break-words text-ivory">{c.portalStatus ?? "unverified"}</dd>
+              </div>
+              <div>
+                <dt className={labelCls}>Expires</dt>
+                <dd className="mt-1 text-ivory"><Expiry date={c.expiresAt} /></dd>
+              </div>
+              <div>
+                <dt className={labelCls}>Last checked</dt>
+                <dd className="mt-1 text-ivory">{c.lastVerifiedAt ? formatDateTime(c.lastVerifiedAt) : "never"}</dd>
+              </div>
+            </dl>
+            {isLumiConfigured() && (c.type === "PILOT_LICENCE" || c.type === "CABIN_CREW_CERT") && (
+              <LumiVerifyPanel label={c.type === "CABIN_CREW_CERT" ? "your SACAA cabin crew licence" : "your SACAA licence"} />
+            )}
+            {c.ratings.length > 0 && (
+              <div className="mt-5 overflow-x-auto rounded-2xl border border-white/10">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white/5 text-xs uppercase tracking-wide text-slate-tac">
+                    <tr>
+                      <th className="px-3 py-2.5">Rating</th>
+                      <th className="px-3 py-2.5">Expires</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {c.ratings.map((r) => (
+                      <tr key={r.id} className="align-top text-ivory/90">
+                        <td className="break-words px-3 py-2.5">{r.name}</td>
+                        <td className="px-3 py-2.5"><Expiry date={r.expiresAt} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ))}
 
-      {person.credentials.map((c) => (
-        <section key={c.id}>
-          <h2>
-            {c.type === "CABIN_CREW_CERT" ? "Cabin Crew Licence" : c.licenceCategory ?? "Licence"} {c.licenceNumber}
-          </h2>
-          <p>
-            Status: {c.portalStatus ?? "unverified"} · Expires {fmt(c.expiresAt)} ({daysLeft(c.expiresAt)}) · Last
-            checked {c.lastVerifiedAt ? c.lastVerifiedAt.toLocaleString("en-ZA") : "never"}
-          </p>
-          {(c.type === "PILOT_LICENCE" || c.type === "CABIN_CREW_CERT") && (
-            <LumiVerifyPanel label={c.type === "CABIN_CREW_CERT" ? "your SACAA cabin crew licence" : "your SACAA licence"} />
-          )}
-          <table>
-            <thead>
-              <tr>
-                <th align="left">Rating</th>
-                <th align="left">Expires</th>
-                <th align="left">Left</th>
-              </tr>
-            </thead>
-            <tbody>
-              {c.ratings.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.name}</td>
-                  <td>{fmt(r.expiresAt)}</td>
-                  <td>{daysLeft(r.expiresAt)}</td>
-                </tr>
+        <section aria-labelledby="medical-h" className={cardCls}>
+          <h2 id="medical-h" className="font-display text-2xl text-ivory">Medical</h2>
+          {person.medicals.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-tac">No medical on file.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-white/10">
+              {person.medicals.map((m) => (
+                <li key={m.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm">
+                  <span className="text-ivory">Class {m.class}</span>
+                  <span className="flex flex-wrap items-center gap-x-2 text-slate-tac">
+                    Expires <Expiry date={m.expiresAt} />
+                  </span>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+          )}
         </section>
-      ))}
 
-      <h2>Medical</h2>
-      {person.medicals.length === 0 && <p>—</p>}
-      {person.medicals.map((m) => (
-        <p key={m.id}>
-          Class {m.class}: expires {fmt(m.expiresAt)} ({daysLeft(m.expiresAt)})
-        </p>
-      ))}
-
-      <h2>Logbook</h2>
-      <p>{person.logbook ? `${person.logbook.totalHours.toString()} hrs total (as of ${fmt(person.logbook.asOf)})` : "Not uploaded"}</p>
+        <section aria-labelledby="logbook-h" className={cardCls}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="logbook-h" className="font-display text-2xl text-ivory">Logbook</h2>
+            <Link href="/wallet/logbook" className={ghostBtnSm}>Open logbook →</Link>
+          </div>
+          {person.logbook || totals.entryCount > 0 ? (
+            <>
+              <p className="mt-3 flex flex-wrap items-baseline gap-x-1.5">
+                <span className="font-display text-4xl text-gold-gradient">{h1(totals.grand.totalHours)}</span>
+                <span className="text-slate-tac">hrs total</span>
+              </p>
+              <p className="mt-1 text-sm text-slate-tac">
+                {totals.entryCount > 0 ? `${h1(totals.logged.totalHours)} logged in ${totals.entryCount} flight${totals.entryCount === 1 ? "" : "s"}` : ""}
+                {totals.entryCount > 0 && person.logbook ? " · " : ""}
+                {person.logbook ? `${h1(totals.broughtForward.totalHours)} brought forward (as of ${formatDate(person.logbook.asOf)})` : ""}
+              </p>
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-slate-tac">Not uploaded</p>
+          )}
+        </section>
       </div>
     </main>
   );

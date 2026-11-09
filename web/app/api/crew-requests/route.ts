@@ -8,8 +8,8 @@ const TYPES = AIRCRAFT_TYPES.map(([code]) => code);
 
 const schema = z.object({
   role: z.enum(["PILOT", "CABIN_CREW", "AME", "GROUND_CREW"]),
-  /** ICAO type designator from the dropdown. The pilot must hold an exact rating for it. */
-  aircraftType: z.string().refine((v) => TYPES.includes(v), "choose an aircraft type from the list"),
+  /** ICAO type designator from the dropdown. Required for pilots (exact type rating); ignored for other crew. */
+  aircraftType: z.string().trim().optional().or(z.literal("").transform(() => undefined)),
   aircraftId: z.string().min(1).optional().or(z.literal("").transform(() => undefined)),
   departureIcao: z.string().trim().toUpperCase(),
   startsAt: z.coerce.date(),
@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
   }
   const input = parsed.data;
 
+  // Pilots are matched on an exact aircraft type rating; other crew aren't type-rated, so no type is needed.
+  const needsType = input.role === "PILOT";
+  const type = input.aircraftType && TYPES.includes(input.aircraftType) ? input.aircraftType : undefined;
+  if (needsType && !type) return issue("aircraftType", "choose an aircraft type from the list");
+
   if (input.startsAt.getTime() <= Date.now()) return issue("startsAt", "must be in the future");
   if (!(await db.airfield.findUnique({ where: { icao: input.departureIcao }, select: { icao: true } }))) return issue("departureIcao", "unknown airfield");
   if (input.aircraftId) {
@@ -46,7 +51,7 @@ export async function POST(req: NextRequest) {
       operatorId: operator.operatorId,
       aircraftId: input.aircraftId,
       role: input.role,
-      requiredRatings: [input.aircraftType],
+      requiredRatings: needsType && type ? [type] : [],
       minTotalHours: input.minTotalHours,
       departureIcao: input.departureIcao,
       startsAt: input.startsAt,
