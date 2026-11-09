@@ -29,7 +29,7 @@ export default async function SigninPage({ searchParams }: { searchParams: Promi
         </p>
         <Link
           href="/try-lumi"
-          className="mt-3 inline-block rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light"
+          className="mt-3 inline-flex items-center rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light pointer-coarse:min-h-11"
         >
           Try Lumi →
         </Link>

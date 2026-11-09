@@ -5,8 +5,11 @@ import { db } from "@/lib/db";
 import { formatZar } from "@/lib/empty-legs-shared";
 import { operatorRoster } from "@/lib/insights";
 import { requireOperator } from "@/lib/session";
-import { primaryBtn } from "@/components/ui/Field";
+import { cardCls, primaryBtn } from "@/components/ui/Field";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Pill } from "@/components/ui/Pill";
 import { StatCards } from "@/components/operator/StatCards";
+import { linkCls, standaloneLinkCls } from "@/components/operator/styles";
 import { ReputationMini } from "@/components/insights/Reputation";
 import { LumiVerifyPanel } from "@/components/pilot/LumiVerifyPanel";
 import { isLumiConfigured } from "@/lib/lumi";
@@ -33,14 +36,12 @@ export default async function OperatorDashboard() {
   const topCrew = roster.slice(0, 3);
 
   return (
-    <div className="space-y-10">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-5xl text-ivory">Good day, {operatorName}</h1>
-          <p className="mt-2 text-slate-tac">Your fleet, crew and charter demand at a glance.</p>
-        </div>
-        <Link href="/operator/crewing/new" className={primaryBtn}>Post crew request</Link>
-      </header>
+    <div className="space-y-8 sm:space-y-10">
+      <PageHeader
+        title={`Good day, ${operatorName}`}
+        subtitle="Your fleet, crew and charter demand at a glance."
+        action={<Link href="/operator/crewing/new" className={primaryBtn}>Post crew request</Link>}
+      />
 
       <StatCards
         stats={[
@@ -52,15 +53,15 @@ export default async function OperatorDashboard() {
       />
 
       {!isPrivate && isLumiConfigured() && (
-        <section className="glass rounded-3xl p-6">
+        <section className={cardCls}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-display text-2xl text-ivory">AOC verification</h2>
             {orgRow?.aocVerifiedAt ? (
-              <span className="inline-flex items-center rounded-full border border-emerald-status/40 bg-emerald-status/10 px-3 py-1 text-xs font-medium text-emerald-status">
+              <Pill tone="ok">
                 Verified{orgRow.aocStatus ? ` · ${orgRow.aocStatus}` : ""} · {new Date(orgRow.aocVerifiedAt).toLocaleDateString("en-ZA")}
-              </span>
+              </Pill>
             ) : (
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-tac">Unverified</span>
+              <Pill>Unverified</Pill>
             )}
           </div>
           <LumiVerifyPanel
@@ -70,8 +71,8 @@ export default async function OperatorDashboard() {
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="glass rounded-3xl p-6">
+      <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+        <section className={cardCls}>
           <h2 className="font-display text-2xl text-ivory">Latest charter inquiries</h2>
           {inquiries.length === 0 ? (
             <p className="mt-4 text-sm text-slate-tac">No open inquiries right now.</p>
@@ -81,7 +82,7 @@ export default async function OperatorDashboard() {
                 const route = b.legs as { fromIcao: string; toIcao: string; date: string }[];
                 return (
                   <li key={b.id} className="flex items-baseline justify-between gap-4 py-3 text-sm">
-                    <div>
+                    <div className="min-w-0 break-words">
                       <p className="text-ivory">{route.map((l) => `${l.fromIcao}→${l.toIcao}`).join(" · ")}</p>
                       <p className="text-xs text-slate-tac">{b.reference} · {CLASS_LABEL[b.aircraftClass] ?? b.aircraftClass} · {b.passengers} pax · {route[0]?.date}</p>
                     </div>
@@ -93,20 +94,20 @@ export default async function OperatorDashboard() {
           )}
         </section>
 
-        <section className="glass rounded-3xl p-6">
-          <div className="flex items-center justify-between">
+        <section className={cardCls}>
+          <div className="flex flex-wrap items-center justify-between gap-x-4">
             <h2 className="font-display text-2xl text-ivory">Your top crew</h2>
-            <Link href="/operator/insights" className="text-sm text-gold-light underline underline-offset-4">Insights →</Link>
+            <Link href="/operator/insights" className={standaloneLinkCls}>Insights →</Link>
           </div>
           {topCrew.length === 0 ? (
             <p className="mt-4 text-sm text-slate-tac">
-              List your pilots to see their reliability and rank them. <Link href="/operator/pilots" className="text-gold-light underline">Add crew →</Link>
+              List your pilots to see their reliability and rank them. <Link href="/operator/pilots" className={linkCls}>Add crew →</Link>
             </p>
           ) : (
             <ul className="mt-4 divide-y divide-white/10">
               {topCrew.map((p) => (
                 <li key={p.personId} className="flex items-center justify-between gap-4 py-3 text-sm">
-                  <span className="text-ivory">{p.fullName}</span>
+                  <span className="min-w-0 break-words text-ivory">{p.fullName}</span>
                   <ReputationMini reputation={p.reputation} />
                 </li>
               ))}

@@ -9,8 +9,9 @@ export default async function OperatorLayout({ children }: { children: ReactNode
   return (
     <>
       <OperatorNav operatorName={operator.operatorName} isPrivate={operator.isPrivate} />
-      <main className="px-6 py-10">
-        <div className="mx-auto max-w-7xl">{children}</div>
+      {/* Same width as the navbar and footer (max-w-7xl) because the portal's tiles and tables use the extra room. */}
+      <main className="px-4 pb-24 pt-8 sm:px-6 sm:pt-10">
+        <div className="mx-auto max-w-7xl px-safe">{children}</div>
       </main>
     </>
   );

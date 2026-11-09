@@ -22,12 +22,22 @@ provider's own site; don't guess an endpoint or scope.
 **MyFlightbook (OAuth2 pull — the one provider with a usable read API):**
 - `MYFLIGHTBOOK_CLIENT_ID`
 - `MYFLIGHTBOOK_CLIENT_SECRET`
-- `MYFLIGHTBOOK_AUTH_URL`  (default `https://myflightbook.com/logbook/public/oauthtoken.aspx`)
-- `MYFLIGHTBOOK_TOKEN_URL` (default `https://myflightbook.com/logbook/public/oauthtoken.aspx`)
-- `MYFLIGHTBOOK_API_URL`   (default `https://myflightbook.com/logbook/public/WebService.asmx`)
-- `MYFLIGHTBOOK_SCOPE`     (default `currency totals addflight readflight`)
-- Redirect URI the app sends: `{origin}/api/logbook/connect/myflightbook/callback`
-  (for local dev that's `http://localhost:3000/api/logbook/connect/myflightbook/callback`).
+- `MYFLIGHTBOOK_AUTH_URL`  (default `https://myflightbook.com/logbook/mvc/oAuth/Authorize`)
+- `MYFLIGHTBOOK_TOKEN_URL` (default `https://myflightbook.com/logbook/mvc/oAuth/OAuthToken`)
+- `MYFLIGHTBOOK_API_URL`   (default `https://myflightbook.com/logbook/mvc/oAuth/OAuthResource`)
+- `MYFLIGHTBOOK_SCOPE`     (default `readflight` — the importer only reads flights)
+- Redirect URI the app sends: `{APP_BASE_URL}/api/logbook/connect/myflightbook/callback`. MyFlightbook matches it
+  on host, port and path against the callbacks registered for the client, so register one per environment, e.g.
+  `https://lumiritin.vercel.app/api/logbook/connect/myflightbook/callback` and, for local dev with
+  `next dev --experimental-https`, `https://localhost:3000/api/logbook/connect/myflightbook/callback`.
+- Only the id and secret are required; the three URLs above are built-in defaults and only need setting to point
+  at a staging server. MyFlightbook's developer page says **not to test against the live site** and to ask them for
+  a staging server.
+- How it works: `GET /api/logbook/connect/myflightbook` (start) → MyFlightbook "Allow access" →
+  `…/callback` (swaps the code for tokens, stores them encrypted in `external_connection`, imports) →
+  `/wallet/logbook`. `POST …/sync` re-syncs, `DELETE …/myflightbook` disconnects. Flights are keyed by MyFlightbook's
+  `FlightID` (`flight_log_entry.externalSource/externalId`), so re-syncing updates in place and never duplicates.
+- Set `MYFLIGHTBOOK_DEBUG=1` for the first real sign-in to log which landing/date fields the live API returns.
 
 **Lumi (AI document reading — scans/photos/PDFs of logbook pages):**
 - `ANTHROPIC_API_KEY` — used server-side to read logbook pages and licences.
@@ -38,17 +48,19 @@ provider's own site; don't guess an endpoint or scope.
    - Go to myflightbook.com, sign in (I'll take over when a login or password screen appears — pause and
      ask me, never type my credentials yourself).
    - Find the developer / OAuth client registration page. Create a client for "Lumiritin".
-   - Set the redirect/callback URI to `http://localhost:3000/api/logbook/connect/myflightbook/callback`
-     (and ask me for the production origin so we can add that one too).
+   - Set the redirect/callback URIs described above (one per environment; ask me for the production origin).
    - Capture the **client id** and **client secret** and give them to me to paste into `.env`.
 
 2. **Confirm the OAuth + web-service details from MyFlightbook's own docs.**
    - Verify the **authorization URL, token URL, API base URL**, and the exact **scope** strings the API
      accepts. If any differ from the defaults above, tell me the corrected value for each env var.
-   - Confirm the read endpoint we call is right: we POST to `{API_URL}/FlightsWithQueryAndOffset` with
-     `{ szAuthToken, maxCount, offset, fq }` and read `TotalFlightTime, PIC, SIC, Dual, CFI, Nighttime,
-     IMC, SimulatedIFR, FullStopLandings, NightLandings, Route, ModelDisplay, TailNumDisplay, Comment`.
-     Flag any field-name mismatches.
+   - Confirm the read call is right: we POST **form fields** `fq` (JSON, `{}` = all flights), `offset` and
+     `maxCount` to `{API_URL}/FlightsWithQueryAndOffset?json=1` with the access token in an
+     `Authorization: Bearer` header (no `szAuthToken` — it is ignored with OAuth). We read `FlightID, Date,
+     TotalFlightTime, PIC, SIC, Dual, CFI, Nighttime, IMC, SimulatedIFR, Landings, NightLandings,
+     FullStopLandings, Route, ModelDisplay, TailNumDisplay` (the pilot's `Comment` is deliberately NOT
+     imported). Still unconfirmed by the docs, so check against a real response: the token response's JSON field
+     names, the wire format of `Date`, and what `Landings` / `FullStopLandings` / `NightLandings` each count.
 
 3. **ForeFlight, LogTen, Garmin Pilot — export formats (these have no pull API).**
    - For each, find the official steps to export the logbook as **CSV**, and note the **column headers**

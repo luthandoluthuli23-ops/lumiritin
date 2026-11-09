@@ -6,7 +6,8 @@ import { getPilotPersonId } from "@/lib/session";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_BYTES = 6 * 1024 * 1024;
+// Vercel rejects request bodies above ~4.5 MB before our code runs (with a non-JSON error), so cap below that.
+const MAX_BYTES = 4 * 1024 * 1024;
 const round1 = (x: number) => Math.round(x * 10) / 10;
 
 /**
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "no_file", message: "Upload a photo or PDF of your logbook page." }, { status: 400 });
-  if (file.size === 0 || file.size > MAX_BYTES) return NextResponse.json({ error: "too_large", message: "File must be between 1 byte and 6 MB." }, { status: 413 });
+  if (file.size === 0 || file.size > MAX_BYTES) return NextResponse.json({ error: "too_large", message: "File must be between 1 byte and 4 MB." }, { status: 413 });
   if (!(LUMI_ACCEPTED_MEDIA as readonly string[]).includes(file.type)) {
     return NextResponse.json({ error: "bad_type", message: "Upload a PDF or an image (JPEG, PNG, WebP) of your logbook page." }, { status: 415 });
   }

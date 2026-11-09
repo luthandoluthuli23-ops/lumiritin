@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { EASE_LUXE } from "@/lib/animations";
 import { classForType, computeQuote, legDistanceNm } from "@/lib/charter";
 import { MAX_DISCOUNT_PERCENT, aircraftName, formatZar, formatWindow } from "@/lib/empty-legs-shared";
 import type { AirfieldOption } from "@/lib/geo";
 import { nowSastLocal, sastLocalToIso } from "@/lib/sast";
 import { AirfieldAutocomplete } from "@/components/charter/AirfieldAutocomplete";
-import { FormError, Field, apiErrorMessage, ghostBtn, inputCls, primaryBtn } from "@/components/ui/Field";
+import { FormError, Field, apiErrorMessage, cardCls, ghostBtn, inputCls, primaryBtn } from "@/components/ui/Field";
 
 interface AircraftOption {
   id: string;
@@ -22,7 +22,15 @@ interface AircraftOption {
 
 const STEPS = ["Aircraft", "Route", "Window & seats", "Pricing", "Review"] as const;
 
-export function EmptyLegWizard({ airfields, aircraft }: { airfields: AirfieldOption[]; aircraft: AircraftOption[] }) {
+export function EmptyLegWizard(props: { airfields: AirfieldOption[]; aircraft: AircraftOption[] }) {
+  return (
+    <MotionConfig reducedMotion="user">
+      <Wizard {...props} />
+    </MotionConfig>
+  );
+}
+
+function Wizard({ airfields, aircraft }: { airfields: AirfieldOption[]; aircraft: AircraftOption[] }) {
   const [step, setStep] = useState(0);
   const [aircraftId, setAircraftId] = useState(aircraft[0]?.id ?? "");
   const [origin, setOrigin] = useState(aircraft[0]?.base ?? "");
@@ -117,10 +125,10 @@ export function EmptyLegWizard({ airfields, aircraft }: { airfields: AirfieldOpt
 
   if (published) {
     return (
-      <div className="glass mx-auto max-w-xl rounded-3xl p-10 text-center shadow-gold">
+      <div className={`${cardCls} mx-auto max-w-xl text-center shadow-gold`}>
         <h2 className="font-display text-4xl text-ivory">Published</h2>
         <p className="mt-3 text-slate-tac">{origin} → {destination} is now live on the empty-leg marketplace.</p>
-        <div className="mt-8 flex flex-wrap justify-center gap-4">
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link href="/empty-legs" className={primaryBtn}>View marketplace</Link>
           <button type="button" onClick={() => { setPublished(false); setStep(0); setDestination(""); setStart(""); setEnd(""); setStandard(""); }} className={ghostBtn}>Publish another</button>
         </div>
@@ -129,19 +137,20 @@ export function EmptyLegWizard({ airfields, aircraft }: { airfields: AirfieldOpt
   }
 
   return (
-    <div className="glass max-w-3xl rounded-3xl p-6 sm:p-8">
-      <ol className="mb-8 flex items-center gap-2" aria-label="Progress">
+    <div className={`${cardCls} max-w-3xl`}>
+      <ol className="flex items-center gap-2" aria-label="Progress">
         {STEPS.map((label, i) => (
           <li key={label} className="flex flex-1 items-center gap-2" aria-current={i === step ? "step" : undefined}>
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${i <= step ? "bg-gold text-obsidian" : "bg-white/10 text-slate-tac"}`}>{i + 1}</span>
-            <span className={`hidden text-xs sm:block ${i === step ? "text-ivory" : "text-slate-tac"}`}>{label}</span>
+            <span className={`sr-only text-xs sm:not-sr-only ${i === step ? "text-ivory" : "text-slate-tac"}`}>{label}</span>
             {i < STEPS.length - 1 && <span className={`h-px flex-1 ${i < step ? "bg-gold/60" : "bg-white/10"}`} />}
           </li>
         ))}
       </ol>
+      <p aria-hidden className="mt-3 text-sm text-slate-tac sm:hidden">Step {step + 1} of {STEPS.length} · <span className="text-ivory">{STEPS[step]}</span></p>
 
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div key={step} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0, transition: { duration: 0.35, ease: EASE_LUXE } }} exit={{ opacity: 0, x: -24, transition: { duration: 0.15 } }} className="min-h-72 space-y-5">
+        <motion.div key={step} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0, transition: { duration: 0.35, ease: EASE_LUXE } }} exit={{ opacity: 0, x: -24, transition: { duration: 0.15 } }} className="mt-6 min-h-72 space-y-5 sm:mt-8">
           {step === 0 && (
             <div role="radiogroup" aria-label="Aircraft" className="grid gap-3 sm:grid-cols-2">
               {aircraft.map((a) => (
@@ -168,7 +177,7 @@ export function EmptyLegWizard({ airfields, aircraft }: { airfields: AirfieldOpt
                 <Field label="Latest departure (SAST)"><input type="datetime-local" min={start || minNow} value={end} onChange={(e) => setEnd(e.target.value)} className={inputCls} /></Field>
               </div>
               <Field label={`Seats to sell (max ${ac.seats})`}>
-                <input type="number" min={1} max={ac.seats} value={seats} onChange={(e) => setSeats(Number(e.target.value))} className={inputCls} />
+                <input type="number" inputMode="numeric" min={1} max={ac.seats} value={seats} onChange={(e) => setSeats(Number(e.target.value))} className={inputCls} />
               </Field>
             </>
           )}
@@ -176,13 +185,13 @@ export function EmptyLegWizard({ airfields, aircraft }: { airfields: AirfieldOpt
           {step === 3 && (
             <>
               <Field label="Standard price per seat (ZAR)" hint={suggestion ? `${suggestion.nm} nm. Suggested from your hourly rate: ${formatZar(suggestion.perSeat)} per seat.` : "The normal charter price per seat for this route."}>
-                <div className="flex gap-3">
-                  <input type="number" min={100} step={100} value={standard} onChange={(e) => setStandard(e.target.value)} className={inputCls} />
+                <div className="flex flex-col sm:flex-row sm:items-stretch sm:gap-3">
+                  <input type="number" inputMode="numeric" min={100} step={100} value={standard} onChange={(e) => setStandard(e.target.value)} className={`${inputCls} min-w-0`} />
                   {suggestion && <button type="button" onClick={() => setStandard(String(suggestion.perSeat))} className={`${ghostBtn} mt-2 shrink-0`}>Use suggestion</button>}
                 </div>
               </Field>
               <Field label={`Discount: ${discount}%`} hint={`Up to ${MAX_DISCOUNT_PERCENT}% off standard rates.`}>
-                <input type="range" min={10} max={MAX_DISCOUNT_PERCENT} step={5} value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="mt-3 w-full accent-[#d4af37]" />
+                <input type="range" min={10} max={MAX_DISCOUNT_PERCENT} step={5} value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className="mt-3 w-full accent-gold pointer-coarse:h-11" />
               </Field>
               <p className="rounded-2xl bg-white/5 p-4 text-sm text-slate-tac">
                 Passengers pay <span className="font-display text-2xl text-gold-gradient">{standardNum ? formatZar(discounted) : "—"}</span> per seat
@@ -206,7 +215,7 @@ export function EmptyLegWizard({ airfields, aircraft }: { airfields: AirfieldOpt
 
       <div className="mt-6 space-y-4">
         <FormError message={error} />
-        <div className="flex justify-between">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           <button type="button" onClick={() => { setError(null); setStep((s) => s - 1); }} disabled={step === 0 || busy} className={ghostBtn}>Back</button>
           {step < STEPS.length - 1 ? (
             <button type="button" onClick={next} className={primaryBtn}>Continue</button>
@@ -222,6 +231,6 @@ export function EmptyLegWizard({ airfields, aircraft }: { airfields: AirfieldOpt
 const Row = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-2xl bg-white/5 p-4">
     <dt className="text-xs uppercase tracking-widest text-slate-tac">{label}</dt>
-    <dd className="mt-1 text-ivory">{value}</dd>
+    <dd className="mt-1 break-words text-ivory">{value}</dd>
   </div>
 );

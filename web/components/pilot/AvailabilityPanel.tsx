@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FormError, SelectField, apiErrorMessage, ghostBtn, primaryBtn } from "@/components/ui/Field";
+import { FormError, SelectField, apiErrorMessage, cardCls, ghostBtn, primaryBtn } from "@/components/ui/Field";
 
 interface Props {
   state: "AVAILABLE" | "BOOKED" | "OFF";
@@ -59,29 +59,26 @@ export function AvailabilityPanel({ state: initial, label: initialLabel, reason 
   }
 
   return (
-    <section className={`glass rounded-3xl border p-6 ${s.ring}`} aria-labelledby="avail-h">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 id="avail-h" className="text-xs uppercase tracking-[0.25em] text-slate-tac">Availability</h2>
-          <p className={`mt-2 flex items-center gap-2 font-display text-3xl ${s.text}`} aria-live="polite">
-            <span className={`h-2.5 w-2.5 rounded-full ${s.dot}`} aria-hidden />
-            {label}
-          </p>
-          <p className="mt-1 text-xs text-slate-tac">{state === "OFF" ? reason : "Operators only see you in crew shortlists while you are available."}</p>
-        </div>
-      </div>
+    <section className={`${cardCls} border ${s.ring}`} aria-labelledby="avail-h">
+      <h2 id="avail-h" className="font-display text-2xl text-ivory">Availability</h2>
+      <p className={`mt-2 flex items-start gap-2 font-display text-2xl sm:text-3xl ${s.text}`} aria-live="polite">
+        <span className={`mt-2.5 h-2.5 w-2.5 shrink-0 rounded-full sm:mt-3 ${s.dot}`} aria-hidden />
+        {label}
+      </p>
+      <p className="mt-1 text-sm text-slate-tac">{state === "OFF" ? reason : "Operators only see you in crew shortlists while you are available."}</p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-        <SelectField label="Go available" value={until} onChange={(e) => setUntil(e.target.value)} hint="Availability always expires. Renew it to stay listed.">
+        <SelectField label="Go available" value={until} onChange={(e) => setUntil(e.target.value)}>
           <option value="">Choose how long…</option>
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </SelectField>
-        <button type="button" disabled={busy || !until} onClick={() => send({ mode: "available", until })} className={`${primaryBtn} sm:mb-[1.6rem]`}>
+        <button type="button" disabled={busy || !until} onClick={() => send({ mode: "available", until })} className={primaryBtn}>
           {state === "AVAILABLE" ? "Renew" : "Go available"}
         </button>
-        <button type="button" disabled={busy || state !== "AVAILABLE"} onClick={() => send({ mode: "off" })} className={`${ghostBtn} sm:mb-[1.6rem]`}>Go off</button>
+        <button type="button" disabled={busy || state !== "AVAILABLE"} onClick={() => send({ mode: "off" })} className={ghostBtn}>Go off</button>
+        <p className="text-xs text-slate-tac sm:col-span-3">Availability always expires. Renew it to stay listed.</p>
       </div>
-      <div className="mt-3"><FormError message={error} /></div>
+      <div className="mt-4 empty:hidden"><FormError message={error} /></div>
     </section>
   );
 }

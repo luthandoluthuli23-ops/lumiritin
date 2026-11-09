@@ -15,9 +15,9 @@ interface Props {
 
 const BADGE: Record<Exclude<Outcome, null>, { label: string; cls: string }> = {
   VERIFIED: { label: "Verified with SACAA", cls: "border-emerald-status/40 bg-emerald-status/10 text-emerald-status" },
-  NOT_FOUND: { label: "Not found on SACAA", cls: "border-red-400/40 bg-red-400/10 text-red-300" },
-  BLOCKED: { label: "Check unavailable", cls: "border-amber-300/40 bg-amber-300/10 text-amber-200" },
-  PORTAL_ERROR: { label: "Portal unavailable", cls: "border-amber-300/40 bg-amber-300/10 text-amber-200" },
+  NOT_FOUND: { label: "Not found on SACAA", cls: "border-alert/40 bg-alert/10 text-alert" },
+  BLOCKED: { label: "Check unavailable", cls: "border-warn/40 bg-warn/10 text-warn" },
+  PORTAL_ERROR: { label: "Portal unavailable", cls: "border-warn/40 bg-warn/10 text-warn" },
 };
 
 function messageFor(outcome: Outcome, status: string | null): string {

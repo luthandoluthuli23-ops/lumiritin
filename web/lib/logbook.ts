@@ -44,11 +44,15 @@ export interface Currency {
   nightLandings90: number;
 }
 
-/** Recency from logged landings. Honest and simple: it only knows about landings the pilot has logged. */
+/**
+ * Recency from logged landings. Honest and simple: it only knows about landings the pilot has logged. Entries are dated
+ * at UTC midnight, so the 90-day window starts at the UTC midnight 90 days ago (a landing exactly 90 days ago still
+ * counts for the whole of that day), and flights dated in the future never count.
+ */
 export function computeCurrency(entries: Pick<FlightLogEntry, "date" | "dayLandings" | "nightLandings">[], now = new Date()): Currency {
-  const windowStart = new Date(now.getTime() - 90 * 86_400_000);
+  const windowStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 90 * 86_400_000);
   const recent = entries
-    .filter((e) => e.date >= windowStart)
+    .filter((e) => e.date >= windowStart && e.date <= now)
     .slice()
     .sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -76,10 +80,21 @@ export function computeCurrency(entries: Pick<FlightLogEntry, "date" | "dayLandi
  * Create/refresh a FlightLogEntry for every crew request this pilot has flown through Lumiritin. Idempotent
  * (keyed by crewRequestId) and safe to call on every page load. Operator-witnessed, so entries are verified.
  * It never overwrites a pilot's manual edits to hour splits/landings — only backfills missing platform rows.
+ * Only flights that have already ended are logged: a booked-but-not-yet-flown duty uses planned hours and must not
+ * inflate totals or passenger recency, so any such row created earlier is removed until the flight is over.
  */
 export async function syncPlatformFlights(personId: string): Promise<number> {
+  const now = new Date();
+  const upcoming = await db.crewRequest.findMany({
+    where: { assignedPersonId: personId, status: "FILLED", endsAt: { gt: now } },
+    select: { id: true },
+  });
+  if (upcoming.length > 0) {
+    await db.flightLogEntry.deleteMany({ where: { personId, source: "PLATFORM", crewRequestId: { in: upcoming.map((r) => r.id) } } });
+  }
+
   const filled = await db.crewRequest.findMany({
-    where: { assignedPersonId: personId, status: { in: ["FILLED"] } },
+    where: { assignedPersonId: personId, status: { in: ["FILLED"] }, endsAt: { lte: now } },
     select: {
       id: true,
       departureIcao: true,
@@ -186,12 +201,16 @@ function parseDate(v: string | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-// ── Shared import helpers (CSV, Lumi document, and provider bridges all funnel through here) ──────────────
+// ── Shared import helpers (CSV and Lumi document imports funnel through here) ──────────────
 
-/** Replace the pilot's previously IMPORTED flights with a fresh set (platform + manual rows are untouched). */
+/**
+ * Replace the pilot's previously CSV / Lumi-IMPORTED flights with a fresh set. Platform and manual rows are untouched,
+ * and so are rows synced from a connected logbook (externalSource set, e.g. MyFlightbook): those are managed by
+ * lib/logbook-sync.ts, so re-importing a CSV must never delete them.
+ */
 export async function replaceImported(personId: string, rows: Prisma.FlightLogEntryCreateManyInput[]): Promise<{ imported: number; replaced: number }> {
   return db.$transaction(async (tx) => {
-    const removed = await tx.flightLogEntry.deleteMany({ where: { personId, source: "IMPORTED" } });
+    const removed = await tx.flightLogEntry.deleteMany({ where: { personId, source: "IMPORTED", externalSource: null } });
     if (rows.length) await tx.flightLogEntry.createMany({ data: rows });
     return { imported: rows.length, replaced: removed.count };
   });

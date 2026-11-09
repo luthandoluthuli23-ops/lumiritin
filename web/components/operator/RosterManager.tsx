@@ -2,7 +2,11 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FormError, SelectField, TextField, apiErrorMessage, ghostBtn, primaryBtn } from "@/components/ui/Field";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FormError, SelectField, TextField, apiErrorMessage, cardCls, dangerTextBtn, ghostBtnSm, primaryBtn } from "@/components/ui/Field";
+import { Pill, type PillTone } from "@/components/ui/Pill";
+import { InvitePilotForm } from "@/components/operator/InvitePilotForm";
+import { PoolToggle } from "@/components/operator/PoolToggle";
 
 export interface RosterRowData {
   id: string;
@@ -14,7 +18,7 @@ export interface RosterRowData {
   blocks: { id: string; label: string }[];
 }
 
-const STATE_STYLE = { AVAILABLE: "bg-emerald-status/15 text-emerald-status", BOOKED: "bg-gold/15 text-gold-light", OFF: "bg-white/5 text-slate-tac" } as const;
+const STATE_TONE: Record<RosterRowData["state"], PillTone> = { AVAILABLE: "ok", BOOKED: "gold", OFF: "neutral" };
 const TIMES = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 const HOURS = [2, 4, 6, 8, 12, 24, 48, 72];
 const dayLabel = new Intl.DateTimeFormat("en-ZA", { timeZone: "Africa/Johannesburg", weekday: "short", day: "numeric", month: "short" });
@@ -25,7 +29,6 @@ export function RosterManager({ rows }: { rows: RosterRowData[] }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
   const days = useMemo(() => Array.from({ length: 21 }, (_, i) => new Date(Date.now() + i * 86_400_000)).map((d) => ({ value: dayValue.format(d), label: dayLabel.format(d) })), []);
 
   async function call(key: string, url: string, method: string, body?: unknown) {
@@ -44,17 +47,6 @@ export function RosterManager({ rows }: { rows: RosterRowData[] }) {
     }
   }
 
-  async function invite(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const email = String(new FormData(form).get("email") ?? "");
-    const data = await call("invite", "/api/operator/roster", "POST", { email });
-    if (data) {
-      setInviteMsg(data.message);
-      form.reset();
-    }
-  }
-
   async function markBusy(e: FormEvent<HTMLFormElement>, id: string) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -64,55 +56,60 @@ export function RosterManager({ rows }: { rows: RosterRowData[] }) {
     if (data) setOpen(null);
   }
 
+  function remove(r: RosterRowData) {
+    if (r.status === "ACTIVE" && !confirm(`Remove ${r.name} from your roster?`)) return;
+    void call(r.id, `/api/operator/roster/${r.id}`, "DELETE");
+  }
+
   return (
     <div className="space-y-6">
+      <FormError message={error} />
       {rows.length === 0 ? (
-        <p className="glass rounded-3xl p-6 text-slate-tac">No pilots on your roster yet. Invite one below.</p>
+        <EmptyState title="No pilots on your roster yet">Invite one below.</EmptyState>
       ) : (
         <ul className="space-y-4">
           {rows.map((r) => (
-            <li key={r.id} className="glass rounded-3xl p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-display text-2xl text-ivory">{r.name}</p>
+            <li key={r.id} className={cardCls}>
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                <div className="min-w-0">
+                  <p className="break-words font-display text-2xl text-ivory">{r.name}</p>
                   {r.status === "INVITED" ? (
                     <p className="text-xs text-slate-tac">Invitation sent: waiting for the pilot to accept</p>
                   ) : (
-                    <span className={`mt-1 inline-block rounded-full px-3 py-1 text-xs ${STATE_STYLE[r.state]}`}>{r.stateLabel}</span>
+                    <Pill tone={STATE_TONE[r.state]} className="mt-1">{r.stateLabel}</Pill>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   {r.status === "ACTIVE" && (
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-tac">
-                      <input type="checkbox" checked={r.sharedToPool} disabled={busy === r.id} onChange={(e) => call(r.id, `/api/operator/roster/${r.id}`, "PATCH", { sharedToPool: e.target.checked })} className="accent-[#d4af37]" />
-                      Offer to shared pool
-                    </label>
+                    <PoolToggle shared={r.sharedToPool} busy={busy === r.id} onToggle={() => call(r.id, `/api/operator/roster/${r.id}`, "PATCH", { sharedToPool: !r.sharedToPool })} />
                   )}
-                  {r.status === "ACTIVE" && <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} className={ghostBtn}>Mark busy…</button>}
-                  <button type="button" disabled={busy === r.id} onClick={() => call(r.id, `/api/operator/roster/${r.id}`, "DELETE")} className="text-sm text-slate-tac underline underline-offset-4 hover:text-alert">
+                  {r.status === "ACTIVE" && (
+                    <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} aria-expanded={open === r.id} className={ghostBtnSm}>Mark busy…</button>
+                  )}
+                  <button type="button" disabled={busy === r.id} onClick={() => remove(r)} className={dangerTextBtn}>
                     {r.status === "INVITED" ? "Withdraw" : "Remove"}
                   </button>
                 </div>
               </div>
 
               {r.blocks.length > 0 && (
-                <ul className="mt-3 space-y-1 border-t border-white/10 pt-3 text-xs text-slate-tac">
+                <ul className="mt-3 space-y-2 border-t border-white/10 pt-3 text-xs text-slate-tac">
                   {r.blocks.map((b) => (
-                    <li key={b.id} className="flex items-center justify-between gap-3">
-                      <span>Busy on your flight: {b.label}</span>
-                      <button type="button" onClick={() => call(b.id, `/api/operator/roster/${r.id}/book?windowId=${b.id}`, "DELETE")} className="underline underline-offset-4 hover:text-ivory">Release</button>
+                    <li key={b.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <span className="min-w-0 break-words">Busy on your flight: {b.label}</span>
+                      <button type="button" disabled={busy === b.id} onClick={() => call(b.id, `/api/operator/roster/${r.id}/book?windowId=${b.id}`, "DELETE")} className={ghostBtnSm}>Release</button>
                     </li>
                   ))}
                 </ul>
               )}
 
               {open === r.id && (
-                <form onSubmit={(e) => markBusy(e, r.id)} className="mt-4 grid gap-4 border-t border-white/10 pt-4 sm:grid-cols-4">
+                <form onSubmit={(e) => markBusy(e, r.id)} className="mt-4 grid gap-4 border-t border-white/10 pt-4 sm:grid-cols-2 lg:grid-cols-4">
                   <SelectField label="Date" name="date" defaultValue={days[0].value}>{days.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}</SelectField>
                   <SelectField label="From (SAST)" name="time" defaultValue="08:00">{TIMES.map((t) => <option key={t} value={t}>{t}</option>)}</SelectField>
                   <SelectField label="For" name="hours" defaultValue="8">{HOURS.map((h) => <option key={h} value={h}>{h} hours</option>)}</SelectField>
                   <TextField label="Note (optional)" name="note" maxLength={120} placeholder="Internal charter" />
-                  <div className="sm:col-span-4"><button type="submit" disabled={busy === r.id} className={primaryBtn}>Block this time</button></div>
+                  <div className="sm:col-span-2 lg:col-span-4"><button type="submit" disabled={busy === r.id} className={primaryBtn}>Block this time</button></div>
                 </form>
               )}
             </li>
@@ -120,12 +117,7 @@ export function RosterManager({ rows }: { rows: RosterRowData[] }) {
         </ul>
       )}
 
-      <form onSubmit={invite} className="glass grid gap-4 rounded-3xl p-6 sm:grid-cols-[1fr_auto] sm:items-end">
-        <TextField label="Invite a pilot by account email" name="email" type="email" required placeholder="pilot@example.com" hint="They must accept before you can see or manage their availability." />
-        <button type="submit" disabled={busy === "invite"} className={`${primaryBtn} sm:mb-[2.2rem]`}>{busy === "invite" ? "Sending…" : "Send invitation"}</button>
-      </form>
-      {inviteMsg && <p role="status" className="rounded-xl bg-emerald-status/10 px-4 py-2.5 text-sm text-emerald-status">{inviteMsg}</p>}
-      <FormError message={error} />
+      <InvitePilotForm hint="They must accept before you can see or manage their availability." />
     </div>
   );
 }

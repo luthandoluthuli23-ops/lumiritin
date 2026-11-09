@@ -2,6 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Alert, type Tone } from "@/components/ui/Alert";
+import { primaryBtnSm } from "@/components/ui/Field";
+import { fileInputCls } from "./logbook-shared";
 
 interface Extracted {
   documentType: string | null;
@@ -23,26 +26,24 @@ interface PanelProps {
   description?: string;
 }
 
+/** Sits inside a card (the licence card on the wallet, the AOC card on the operator dashboard). */
 export function LumiVerifyPanel({ label = "your SACAA licence", endpoint = "/api/lumi/verify", description }: PanelProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [tone, setTone] = useState<"ok" | "warn" | "err" | null>(null);
+  const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(null);
   const [extracted, setExtracted] = useState<Extracted | null>(null);
   const [reasons, setReasons] = useState<string[]>([]);
 
   async function submit() {
     const file = inputRef.current?.files?.[0];
     if (!file) {
-      setTone("warn");
-      setMessage("Choose a file first — a PDF or a clear photo of your licence.");
+      done("warn", "Choose a file first — a PDF or a clear photo of your licence.");
       return;
     }
     setBusy(true);
-    setMessage(null);
-    setTone(null);
+    setNotice(null);
     setExtracted(null);
     setReasons([]);
     try {
@@ -71,51 +72,39 @@ export function LumiVerifyPanel({ label = "your SACAA licence", endpoint = "/api
     }
   }
 
-  function done(t: "ok" | "warn" | "err", m: string) {
-    setTone(t);
-    setMessage(m);
+  function done(tone: Tone, text: string) {
+    setNotice({ tone, text });
   }
 
-  const toneCls =
-    tone === "ok"
-      ? "border-emerald-status/40 bg-emerald-status/10 text-emerald-status"
-      : tone === "warn"
-        ? "border-amber-300/40 bg-amber-300/10 text-amber-100"
-        : "border-red-400/40 bg-red-400/10 text-red-200";
-
   return (
-    <div className="mt-2 rounded-2xl border border-gold/25 bg-gold/5 p-4">
+    <div className="mt-4 rounded-2xl bg-white/5 p-4">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold/20 text-sm font-semibold text-gold-light">Li</div>
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold/20 text-sm font-semibold text-gold-light" aria-hidden>Li</div>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-ivory">Verify with Lumi</p>
-          <p className="mt-1 text-xs text-slate-tac">
+          <h3 className="font-display text-xl text-ivory">Verify with Lumi</h3>
+          <p className="mt-1 text-sm text-slate-tac">
             {description ??
               `Upload ${label} — the PDF you download from the SACAA card-scan (after the OTP on your phone), or a clear photo of your card. Lumi reads it and confirms your credential in seconds. Nothing is shared publicly.`}
           </p>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
             <input
               ref={inputRef}
               type="file"
+              aria-label="Your licence file"
               accept="application/pdf,image/jpeg,image/png,image/webp"
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-              className="block max-w-full text-xs text-slate-tac file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:text-ivory hover:file:bg-white/15"
+              className={fileInputCls}
             />
-            <button
-              type="button"
-              onClick={submit}
-              disabled={busy}
-              className="rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light disabled:opacity-60"
-            >
+            <button type="button" onClick={submit} disabled={busy} className={`${primaryBtnSm} w-full shrink-0 sm:w-auto`}>
               {busy ? "Lumi is reading…" : "Verify"}
             </button>
           </div>
-          {fileName && !busy && !message && <p className="mt-2 text-xs text-slate-tac">Selected: {fileName}</p>}
+          {fileName && !busy && !notice && <p className="mt-2 break-words text-sm text-slate-tac">Selected: {fileName}</p>}
 
-          {message && (
-            <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${toneCls}`} aria-live="polite">
-              <p>{message}</p>
+          {notice && (
+            <Alert tone={notice.tone} className="mt-3">
+              <p>{notice.text}</p>
               {reasons.length > 0 && (
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
                   {reasons.map((r, i) => (
@@ -124,23 +113,23 @@ export function LumiVerifyPanel({ label = "your SACAA licence", endpoint = "/api
                 </ul>
               )}
               {extracted && (
-                <div className="mt-3 rounded-lg bg-black/20 p-3 text-xs text-slate-tac">
+                <div className="mt-3 rounded-lg bg-obsidian/40 p-3 text-xs text-slate-tac">
                   <p className="text-ivory">What Lumi read</p>
-                  <p className="mt-1">
+                  <p className="mt-1 break-words">
                     {extracted.documentType ?? "Document"}
                     {extracted.holderName ? ` · ${extracted.holderName}` : ""}
                     {extracted.licenceNumber ? ` · ${extracted.licenceNumber}` : ""}
                   </p>
-                  <p className="mt-0.5">
+                  <p className="mt-0.5 break-words">
                     {extracted.licenceType ?? "—"}
                     {extracted.status ? ` · ${extracted.status}` : ""}
                     {extracted.expires ? ` · expires ${extracted.expires}` : ""}
                     {` · confidence ${Math.round(extracted.confidence * 100)}%`}
                   </p>
-                  {extracted.issues.length > 0 && <p className="mt-1 text-amber-200">Notes: {extracted.issues.join("; ")}</p>}
+                  {extracted.issues.length > 0 && <p className="mt-1 break-words text-warn">Notes: {extracted.issues.join("; ")}</p>}
                 </div>
               )}
-            </div>
+            </Alert>
           )}
         </div>
       </div>

@@ -8,7 +8,8 @@ import { getPilotPersonId } from "@/lib/session";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_BYTES = 6 * 1024 * 1024;
+// Vercel rejects request bodies above ~4.5 MB before our code runs (with a non-JSON error), so cap below that.
+const MAX_BYTES = 4 * 1024 * 1024;
 const isCsv = (f: File) => /\.csv$/i.test(f.name) || /csv|excel|text\/plain/i.test(f.type);
 
 /**
@@ -28,13 +29,16 @@ export async function POST(req: NextRequest) {
   }
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "no_file", message: "Upload a file." }, { status: 400 });
-  if (file.size === 0 || file.size > MAX_BYTES) return NextResponse.json({ error: "too_large", message: "File must be between 1 byte and 6 MB." }, { status: 413 });
+  if (file.size === 0 || file.size > MAX_BYTES) return NextResponse.json({ error: "too_large", message: "File must be between 1 byte and 4 MB." }, { status: 413 });
 
   const provider = String(form.get("provider") ?? "").trim().slice(0, 40) || null;
   const ref = String(form.get("ref") ?? "").trim().slice(0, 60) || null;
-  if (provider || ref) {
-    await db.person.update({ where: { id: personId }, data: { ...(provider ? { logbookProvider: provider } : {}), ...(ref ? { logbookRef: ref } : {}) } });
-  }
+  // Remember which logbook this came from, but only once the import actually succeeded (a rejected file must not flip it).
+  const rememberSource = async () => {
+    if (provider || ref) {
+      await db.person.update({ where: { id: personId }, data: { ...(provider ? { logbookProvider: provider } : {}), ...(ref ? { logbookRef: ref } : {}) } });
+    }
+  };
 
   // ── CSV: exact, free, one entry per flight ─────────────────────────────────
   if (isCsv(file)) {
@@ -44,6 +48,7 @@ export async function POST(req: NextRequest) {
     if (result.rows.length === 0) return NextResponse.json({ ok: false, message: "No flights found in that file." }, { status: 422 });
 
     const { replaced } = await replaceImported(personId, result.rows);
+    await rememberSource();
     return NextResponse.json({ ok: true, mode: "csv", imported: result.imported, skipped: result.skipped, replaced });
   }
 
@@ -63,6 +68,7 @@ export async function POST(req: NextRequest) {
   if (flightsResult.ok && flightsResult.flights && flightsResult.flights.length > 0) {
     const rows = lumiRowsToEntries(flightsResult.flights, personId);
     const { imported, replaced } = await replaceImported(personId, rows);
+    await rememberSource();
     return NextResponse.json({ ok: true, mode: "lumi-flights", imported, replaced });
   }
 
@@ -78,5 +84,6 @@ export async function POST(req: NextRequest) {
     update: { totalHours: total, asOf: now, selfDeclared: true },
     create: { personId, totalHours: total, asOf: now, selfDeclared: true },
   });
+  await rememberSource();
   return NextResponse.json({ ok: true, mode: "lumi-total", totalHours: total, confidence: summary.extraction?.confidence ?? null, issues: summary.extraction?.issues ?? [] });
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Alert } from "@/components/ui/Alert";
+import { primaryBtn } from "@/components/ui/Field";
 
 export function RunRemindersButton() {
   const [busy, setBusy] = useState(false);
@@ -22,10 +24,10 @@ export function RunRemindersButton() {
 
   return (
     <div>
-      <button type="button" onClick={run} disabled={busy} className="rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light disabled:opacity-60">
+      <button type="button" onClick={run} disabled={busy} className={primaryBtn}>
         {busy ? "Running…" : "Run expiry reminders now"}
       </button>
-      {msg && <p className={`mt-3 text-sm ${msg.ok ? "text-emerald-status" : "text-alert"}`}>{msg.text}</p>}
+      {msg && <Alert tone={msg.ok ? "ok" : "err"} className="mt-4">{msg.text}</Alert>}
     </div>
   );
 }

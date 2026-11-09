@@ -1,6 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Alert, type Tone } from "@/components/ui/Alert";
+import { SelectField, cardCls, primaryBtnSm } from "@/components/ui/Field";
+import { fileInputCls } from "./logbook-shared";
 
 interface Extracted {
   documentType: string | null;
@@ -32,20 +35,17 @@ export function LumiTryPanel() {
   const [kind, setKind] = useState<string>("pilot_licence");
   const [fileName, setFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [tone, setTone] = useState<"ok" | "warn" | "err" | null>(null);
+  const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(null);
   const [extracted, setExtracted] = useState<Extracted | null>(null);
 
   async function submit() {
     const file = inputRef.current?.files?.[0];
     if (!file) {
-      setTone("warn");
-      setMessage("Choose a file first — a PDF or a clear photo of the document.");
+      done("warn", "Choose a file first — a PDF or a clear photo of the document.");
       return;
     }
     setBusy(true);
-    setMessage(null);
-    setTone(null);
+    setNotice(null);
     setExtracted(null);
     try {
       const body = new FormData();
@@ -75,70 +75,51 @@ export function LumiTryPanel() {
     }
   }
 
-  function done(t: "ok" | "warn" | "err", m: string) {
-    setTone(t);
-    setMessage(m);
+  function done(tone: Tone, text: string) {
+    setNotice({ tone, text });
   }
 
-  const toneCls =
-    tone === "ok"
-      ? "border-emerald-status/40 bg-emerald-status/10 text-emerald-status"
-      : tone === "warn"
-        ? "border-amber-300/40 bg-amber-300/10 text-amber-100"
-        : "border-red-400/40 bg-red-400/10 text-red-200";
-
   return (
-    <div className="rounded-2xl border border-gold/25 bg-gold/5 p-5">
+    <section aria-labelledby="try-lumi-h" className={`${cardCls} border border-gold/40`}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-sm font-semibold text-gold-light">Li</div>
+        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold/20 text-sm font-semibold text-gold-light" aria-hidden>Li</div>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-ivory">Try Lumi — no account needed</p>
-          <p className="mt-1 text-xs text-slate-tac">
+          <h2 id="try-lumi-h" className="font-display text-2xl text-ivory">Try Lumi — no account needed</h2>
+          <p className="mt-2 text-sm text-slate-tac">
             Pick a document type, upload a PDF or a clear photo, and Lumi reads it in seconds. This is a demo:
             nothing is saved, nothing is shared, and no account is created.
           </p>
 
-          <div className="mt-4 space-y-3">
-            <div>
-              <label className="mb-1 block text-xs text-slate-tac">Document type</label>
-              <select
-                value={kind}
-                onChange={(e) => setKind(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-obsidian/60 px-3 py-2.5 text-sm text-ivory focus:border-gold/50 focus:outline-none"
-              >
-                {KINDS.map((k) => (
-                  <option key={k.value} value={k.value}>
-                    {k.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="mt-5 space-y-4">
+            <SelectField label="Document type" value={kind} onChange={(e) => setKind(e.target.value)}>
+              {KINDS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {k.label}
+                </option>
+              ))}
+            </SelectField>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 ref={inputRef}
                 type="file"
+                aria-label="Document to verify"
                 accept="application/pdf,image/jpeg,image/png,image/webp"
                 onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-                className="block max-w-full text-xs text-slate-tac file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:text-ivory hover:file:bg-white/15"
+                className={fileInputCls}
               />
-              <button
-                type="button"
-                onClick={submit}
-                disabled={busy}
-                className="rounded-xl bg-gold px-5 py-2.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light disabled:opacity-60"
-              >
+              <button type="button" onClick={submit} disabled={busy} className={`${primaryBtnSm} w-full shrink-0 sm:w-auto`}>
                 {busy ? "Lumi is reading…" : "Verify"}
               </button>
             </div>
-            {fileName && !busy && !message && <p className="text-xs text-slate-tac">Selected: {fileName}</p>}
+            {fileName && !busy && !notice && <p className="break-words text-sm text-slate-tac">Selected: {fileName}</p>}
           </div>
 
-          {message && (
-            <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${toneCls}`} aria-live="polite">
-              <p>{message}</p>
+          {notice && (
+            <Alert tone={notice.tone} className="mt-4">
+              <p>{notice.text}</p>
               {extracted && (
-                <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 rounded-lg bg-black/20 p-3 text-xs text-slate-tac sm:grid-cols-2">
+                <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg bg-obsidian/40 p-3 text-xs text-slate-tac sm:grid-cols-2">
                   <Row label="Document" value={extracted.documentType} />
                   <Row label="Name" value={extracted.holderName} />
                   <Row label="Licence / cert no." value={extracted.licenceNumber} />
@@ -156,22 +137,22 @@ export function LumiTryPanel() {
                   {extracted.ratings.length > 0 && (
                     <div className="sm:col-span-2">
                       <dt className="text-ivory">Ratings</dt>
-                      <dd className="mt-0.5">{extracted.ratings.map((r) => `${r.name}${r.expires ? ` (to ${r.expires})` : ""}`).join(", ")}</dd>
+                      <dd className="mt-0.5 break-words">{extracted.ratings.map((r) => `${r.name}${r.expires ? ` (to ${r.expires})` : ""}`).join(", ")}</dd>
                     </div>
                   )}
                   {extracted.issues.length > 0 && (
                     <div className="sm:col-span-2">
-                      <dt className="text-amber-200">Notes from Lumi</dt>
-                      <dd className="mt-0.5 text-amber-200">{extracted.issues.join("; ")}</dd>
+                      <dt className="text-warn">Notes from Lumi</dt>
+                      <dd className="mt-0.5 break-words text-warn">{extracted.issues.join("; ")}</dd>
                     </div>
                   )}
                 </dl>
               )}
-            </div>
+            </Alert>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -179,7 +160,7 @@ function Row({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex flex-col">
       <dt className="text-ivory">{label}</dt>
-      <dd className="mt-0.5">{value ?? "—"}</dd>
+      <dd className="mt-0.5 break-words">{value ?? "—"}</dd>
     </div>
   );
 }

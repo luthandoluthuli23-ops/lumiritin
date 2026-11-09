@@ -172,6 +172,7 @@ model Person {
   rosterEntries CrewRoster[]
   pings         CrewPing[]
   checkRecords  CheckRecord[]
+  connections   ExternalConnection[]
 
   @@map("person")
 }
@@ -303,13 +304,38 @@ model FlightLogEntry {
   verified         Boolean         @default(false) // true for operator-witnessed platform flights
   crewRequestId    String?         @unique // links a PLATFORM entry to its booking, so sync stays idempotent
   remarks          String?
+  // Set for rows pulled from an external logbook (externalSource "myflightbook", externalId = its FlightID), so a
+  // re-sync updates in place instead of duplicating. Null for manual / CSV / Lumi / platform rows (NULLs never collide).
+  externalSource   String?
+  externalId       String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
+  @@unique([personId, externalSource, externalId])
   @@index([personId, date])
   @@map("flight_log_entry")
+}
+
+// A pilot's OAuth link to an external logbook (provider id such as "myflightbook"). The tokens are AES-256-GCM
+// encrypted with a key derived from SESSION_SECRET (lib/myflightbook/crypto.ts) and are never sent to the browser.
+model ExternalConnection {
+  id                   String    @id @default(cuid())
+  personId             String
+  provider             String
+  accessTokenEnc       String
+  refreshTokenEnc      String?
+  accessTokenExpiresAt DateTime?
+  scope                String?
+  connectedAt          DateTime  @default(now())
+  lastSyncedAt         DateTime?
+  lastError            String?
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, provider])
+  @@map("external_connection")
 }
 
 // A pilot's effective state is derived from these windows by lib/availability.ts:

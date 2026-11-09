@@ -6,6 +6,9 @@ import { BENCH_SHARE_PERCENT } from "@/lib/bench";
 import { db } from "@/lib/db";
 import { formatWindow, formatZar } from "@/lib/empty-legs-shared";
 import { requireOperator } from "@/lib/session";
+import { cardCls, rowCardCls } from "@/components/ui/Field";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Bench — Lumiritin" };
 
@@ -47,13 +50,13 @@ export default async function BenchPage() {
   const contributes = shared > 0;
 
   return (
-    <div className="space-y-10">
-      <header>
-        <h1 className="font-display text-5xl text-ivory">Bench</h1>
-        <p className="mt-2 max-w-2xl text-slate-tac">Your parked pilots start earning for you. When a pilot on your roster takes a contract job for another operator, you accrue a share.</p>
-      </header>
+    <div className="space-y-8 sm:space-y-10">
+      <PageHeader
+        title="Bench"
+        subtitle="Your parked pilots start earning for you. When a pilot on your roster takes a contract job for another operator, you accrue a share."
+      />
 
-      <section className={`glass rounded-3xl border p-6 ${contributes ? "border-emerald-status/40" : "border-gold/40"}`} aria-labelledby="recip-h">
+      <section className={`${cardCls} ${contributes ? "border-emerald-status/40" : "border-gold/40"}`} aria-labelledby="recip-h">
         <h2 id="recip-h" className="font-display text-2xl text-ivory">{contributes ? "Reciprocal access: unlocked" : "Reciprocal access: locked"}</h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-tac">
           {contributes
@@ -62,27 +65,29 @@ export default async function BenchPage() {
         </p>
       </section>
 
-      <StatCards
-        stats={[
-          { label: "Accrued earnings (R)", value: total, href: null, note: "not yet paid out" },
-          { label: "Jobs filled for others", value: earnings.length, href: null },
-          { label: "Pilots on roster", value: active.length, href: null },
-          { label: "Offered to pool", value: shared, href: null },
-        ]}
-      />
-      <p className="-mt-6 text-xs text-slate-tac">
-        Earnings are illustrative: {BENCH_SHARE_PERCENT}% of an assumed contract rate per hour. Both numbers are placeholders until commercial terms are set, and nothing is paid out automatically yet.
-      </p>
+      <div className="space-y-3">
+        <StatCards
+          stats={[
+            { label: "Accrued earnings (R)", value: total, href: null, note: "not yet paid out" },
+            { label: "Jobs filled for others", value: earnings.length, href: null },
+            { label: "Pilots on roster", value: active.length, href: null },
+            { label: "Offered to pool", value: shared, href: null },
+          ]}
+        />
+        <p className="text-xs text-slate-tac">
+          Earnings are illustrative: {BENCH_SHARE_PERCENT}% of an assumed contract rate per hour. Both numbers are placeholders until commercial terms are set, and nothing is paid out automatically yet.
+        </p>
+      </div>
 
       <section aria-labelledby="earn-h">
         <h2 id="earn-h" className="mb-4 font-display text-3xl text-ivory">Recent earnings</h2>
         {earnings.length === 0 ? (
-          <p className="glass rounded-3xl p-6 text-slate-tac">None yet. Offer a rostered pilot to the pool and they will appear in other operators&rsquo; shortlists whenever they are idle.</p>
+          <EmptyState title="None yet">Offer a rostered pilot to the pool and they will appear in other operators&rsquo; shortlists whenever they are idle.</EmptyState>
         ) : (
           <ul className="space-y-3">
             {earnings.map((e) => (
-              <li key={e.id} className="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl p-5">
-                <div>
+              <li key={e.id} className={`${rowCardCls} flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}>
+                <div className="min-w-0 break-words">
                   <p className="text-ivory">{e.crewRequest.operator.name} · {e.crewRequest.departureIcao} · {e.crewRequest.requiredRatings.join(", ")}</p>
                   <p className="text-xs text-slate-tac">{formatWindow(e.crewRequest.startsAt.toISOString(), e.crewRequest.endsAt.toISOString())} · {e.hoursBilled} h</p>
                 </div>

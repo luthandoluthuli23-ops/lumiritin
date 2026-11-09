@@ -21,7 +21,7 @@ export function Footer() {
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164?.replace(/[^\d]/g, "");
 
   return (
-    <footer className="border-t border-white/10 bg-obsidian-800/60 px-6 py-14">
+    <footer className="border-t border-white/10 bg-obsidian-800/60 px-4 pt-14 pb-[max(3.5rem,env(safe-area-inset-bottom))] px-safe sm:px-6">
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-6">
         <div className="md:col-span-1">
           <p className="font-display text-3xl text-gold-light">Lumiritin</p>
@@ -30,10 +30,10 @@ export function Footer() {
 
         <nav aria-label="Airfields" className="md:col-span-2">
           <h2 className="text-xs uppercase tracking-[0.25em] text-gold">Fly from</h2>
-          <ul className="mt-4 grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+          <ul className="mt-4 grid grid-cols-1 gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
             {AIRFIELD_LINKS.map((a) => (
               <li key={a.icao}>
-                <Link href={`/charter?from=${a.icao}`} className="text-slate-tac transition hover:text-ivory">
+                <Link href={`/charter?from=${a.icao}`} className="inline-flex items-center text-slate-tac transition hover:text-ivory pointer-coarse:min-h-11">
                   <span className="font-mono text-ivory">{a.icao}</span> · {a.city}
                 </Link>
               </li>
@@ -43,17 +43,17 @@ export function Footer() {
 
         <nav aria-label="Platform">
           <h2 className="text-xs uppercase tracking-[0.25em] text-gold">Platform</h2>
-          <ul className="mt-4 space-y-2 text-sm text-slate-tac">
-            <li><Link href="/charter" className="hover:text-ivory">Helicopter charter</Link></li>
-            <li><Link href="/auth/signup?role=operator" className="hover:text-ivory">For operators</Link></li>
-            <li><Link href="/auth/signup?role=pilot" className="hover:text-ivory">For pilots</Link></li>
+          <ul className="mt-4 space-y-1 text-sm text-slate-tac">
+            <li><Link href="/charter" className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">Helicopter charter</Link></li>
+            <li><Link href="/auth/signup?role=operator" className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">For operators</Link></li>
+            <li><Link href="/auth/signup?role=pilot" className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">For pilots</Link></li>
           </ul>
         </nav>
 
         <div className="md:col-span-2">
           <h2 className="text-xs uppercase tracking-[0.25em] text-gold">Concierge</h2>
           {whatsapp ? (
-            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-status/40 px-4 py-2 text-sm text-emerald-status transition hover:bg-emerald-status/10">
+            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-status/40 px-4 py-2 text-sm text-emerald-status transition hover:bg-emerald-status/10 pointer-coarse:min-h-11">
               Chat on WhatsApp
             </a>
           ) : (

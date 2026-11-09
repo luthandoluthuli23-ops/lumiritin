@@ -62,7 +62,7 @@ export function NearestAirfieldPicker({ airfields, value, onChange, label = "Dep
 
   return (
     <div>
-      <div className="flex items-end gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
           <AirfieldAutocomplete airfields={airfields} value={value} onChange={onChange} label={label} required={required} name={name} />
         </div>
@@ -70,7 +70,7 @@ export function NearestAirfieldPicker({ airfields, value, onChange, label = "Dep
           type="button"
           onClick={detect}
           disabled={status.kind === "locating"}
-          className="flex shrink-0 items-center gap-2 rounded-xl border border-gold/40 px-4 py-3 text-sm font-medium text-gold-light transition hover:bg-gold/10 disabled:opacity-60"
+          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-gold/40 px-4 py-3 text-sm font-medium text-gold-light transition hover:bg-gold/10 disabled:opacity-60 sm:w-auto pointer-coarse:min-h-11"
         >
           <svg viewBox="0 0 24 24" className={`h-4 w-4 fill-none stroke-current stroke-2 ${status.kind === "locating" ? "animate-spin" : ""}`} aria-hidden>
             {status.kind === "locating" ? <path d="M12 3a9 9 0 1 0 9 9" /> : <path d="M12 2v3m0 14v3M2 12h3m14 0h3M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />}

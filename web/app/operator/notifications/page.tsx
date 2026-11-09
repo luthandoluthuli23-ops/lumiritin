@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { isEmailConfigured } from "@/lib/email";
 import { requireOperator } from "@/lib/session";
 import { isWhatsappConfigured } from "@/lib/whatsapp";
+import { cardCls } from "@/components/ui/Field";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Pill } from "@/components/ui/Pill";
 import { NotificationTester } from "@/components/operator/NotificationTester";
 import { RunRemindersButton } from "@/components/operator/RunRemindersButton";
 
@@ -10,10 +13,10 @@ export const metadata: Metadata = { title: "Notifications — Lumiritin" };
 
 function StatusPill({ on, label }: { on: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm ${on ? "bg-emerald-status/15 text-emerald-status" : "bg-white/5 text-slate-tac"}`}>
-      <span className={`h-2 w-2 rounded-full ${on ? "bg-emerald-status" : "bg-slate-tac"}`} />
-      {label}: {on ? "Configured" : "Not configured"}
-    </span>
+    <Pill tone={on ? "ok" : "neutral"}>
+      <span aria-hidden className={`mr-2 h-2 w-2 shrink-0 rounded-full ${on ? "bg-emerald-status" : "bg-slate-tac"}`} />
+      {label}: {on ? "configured" : "not configured"}
+    </Pill>
   );
 }
 
@@ -25,13 +28,10 @@ export default async function OperatorNotificationsPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-display text-5xl text-ivory">Notifications</h1>
-        <p className="mt-2 max-w-2xl text-slate-tac">
-          Lumiritin pings crew on WhatsApp and emails booking confirmations. Check the channels are live, then send
-          yourself a test.
-        </p>
-      </header>
+      <PageHeader
+        title="Notifications"
+        subtitle="Lumiritin pings crew on WhatsApp and emails booking confirmations. Check the channels are live, then send yourself a test."
+      />
 
       <div className="flex flex-wrap gap-3">
         <StatusPill on={emailOn} label="Email" />
@@ -40,7 +40,7 @@ export default async function OperatorNotificationsPage() {
 
       <NotificationTester defaultEmail={user?.email ?? ""} />
 
-      <section className="glass rounded-3xl p-6">
+      <section className={cardCls}>
         <h2 className="font-display text-2xl text-ivory">Credential expiry reminders</h2>
         <p className="mt-1 max-w-2xl text-sm text-slate-tac">
           Pilots are reminded 90, 30 and 7 days before any licence, rating, medical or recurrent check expires — on
@@ -52,9 +52,9 @@ export default async function OperatorNotificationsPage() {
         </div>
       </section>
 
-      <details className="glass rounded-3xl p-6">
-        <summary className="cursor-pointer font-display text-2xl text-ivory">How to switch these on</summary>
-        <div className="mt-4 space-y-5 text-sm text-slate-tac">
+      <details className={cardCls}>
+        <summary className="cursor-pointer py-1.5 font-display text-2xl text-ivory">How to switch these on</summary>
+        <div className="mt-4 space-y-5 break-words text-sm text-slate-tac">
           <div>
             <p className="text-gold">Email (Resend) — fastest</p>
             <ol className="mt-2 list-decimal space-y-1 pl-5">
