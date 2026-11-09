@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -139,8 +139,13 @@ export async function POST(req: NextRequest) {
     });
 
     await startSession(user);
-    // Welcome email (safe no-op until RESEND_API_KEY is set; never blocks or breaks signup).
-    await sendWelcomeEmail({ to: input.email, firstName: input.firstName, role: input.role });
+    // Welcome email: sent after the response so a slow or failing mail provider can never delay or break signup.
+    // (A safe no-op that only logs until RESEND_API_KEY is set.)
+    const welcome = { to: input.email, firstName: input.firstName, role: input.role };
+    after(async () => {
+      const r = await sendWelcomeEmail(welcome);
+      if (!r.ok && r.error !== "not_configured") console.error("[signup] welcome email not sent:", r.error);
+    });
     return NextResponse.json({ redirect: ROLE_HOME[input.role] }, { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
