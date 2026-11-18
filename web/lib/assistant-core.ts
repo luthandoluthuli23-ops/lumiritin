@@ -1,6 +1,7 @@
 // Pure pieces of the site assistant ("Ask Lumi"): which pages it may send someone to, how those links are built and
 // checked against the visitor's role, and how chat history from the browser is cleaned before it reaches the model.
 // No Prisma, no network: shared by the API route and the tests.
+import { isCharterEnabled } from "@/lib/features";
 import type { Role } from "@/lib/roles";
 
 export interface PageDef {
@@ -39,6 +40,8 @@ export const PAGES = {
 
 export type PageKey = keyof typeof PAGES;
 export const PAGE_KEYS = Object.keys(PAGES) as PageKey[];
+/** Pages the assistant may offer right now (charter drops out while it is switched off). */
+export const availablePageKeys = (): PageKey[] => PAGE_KEYS.filter((k) => k !== "charter" || isCharterEnabled());
 export const isPageKey = (v: unknown): v is PageKey => typeof v === "string" && Object.prototype.hasOwnProperty.call(PAGES, v);
 
 const ICAO = /^[A-Z]{4}$/;
@@ -56,7 +59,10 @@ export type OpenPageResult =
  * through), so the model can't smuggle anything into a URL. Pages reserved for a role refuse anyone else.
  */
 export function openPage(input: { page?: unknown; from?: unknown; to?: unknown; date?: unknown; pax?: unknown; role?: unknown }, viewer: Role | null, todayIso: string): OpenPageResult {
-  if (!isPageKey(input.page)) return { ok: false, error: `Unknown page. Valid pages: ${PAGE_KEYS.join(", ")}.` };
+  if (!isPageKey(input.page)) return { ok: false, error: `Unknown page. Valid pages: ${availablePageKeys().join(", ")}.` };
+  if (input.page === "charter" && !isCharterEnabled()) {
+    return { ok: false, error: "Custom charter requests aren't available on Lumiritin yet. Say so, and offer empty legs (empty_legs) instead." };
+  }
   const def: PageDef = PAGES[input.page];
 
   if (def.role && viewer !== def.role) {

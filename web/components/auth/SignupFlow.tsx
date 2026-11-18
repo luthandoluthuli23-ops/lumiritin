@@ -9,9 +9,10 @@ import { NearestAirfieldPicker } from "@/components/charter/NearestAirfieldPicke
 import { AirfieldAutocomplete } from "@/components/charter/AirfieldAutocomplete";
 import { FormError, TextField, apiErrorMessage, ghostBtn, primaryBtn } from "@/components/ui/Field";
 import { PasswordField } from "@/components/ui/PasswordField";
+import { isCharterEnabled } from "@/lib/features";
 
 const ROLES: { id: Role; blurb: string; icon: string }[] = [
-  { id: "PASSENGER", blurb: "Charter an aircraft on demand across South Africa.", icon: "M2 16l20-7-7 20-3-9-10-4z" },
+  { id: "PASSENGER", blurb: isCharterEnabled() ? "Charter an aircraft on demand across South Africa." : "Book discounted seats on private empty-leg flights across South Africa.", icon: "M2 16l20-7-7 20-3-9-10-4z" },
   { id: "OPERATOR", blurb: "Manage your fleet and crew, and post urgent crew needs.", icon: "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6" },
   { id: "PILOT", blurb: "Pilot or cabin crew: keep your SACAA credentials current and get matched to flights.", icon: "M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4zM9 12l2 2 4-4" },
 ];

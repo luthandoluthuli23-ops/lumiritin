@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { CharterConfigurator } from "@/components/charter/CharterConfigurator";
 import { db } from "@/lib/db";
 import { listAirfields } from "@/lib/airfield-db";
 import { ICAO_RE } from "@/lib/airfields";
 import { sastDate } from "@/lib/empty-legs-shared";
 import { getSession } from "@/lib/session";
+import { isCharterEnabled } from "@/lib/features";
 
-export const metadata: Metadata = {
-  title: "Custom Charter — Lumiritin",
-  description: "Configure a private charter and get an instant estimate in rand.",
-};
+// While charter is switched off the page is a 404, so it mustn't advertise itself in the tab title or search snippets.
+export const metadata: Metadata = isCharterEnabled()
+  ? { title: "Custom Charter — Lumiritin", description: "Configure a private charter and get an instant estimate in rand." }
+  : { title: "Page not found — Lumiritin", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 /** Resolves free-text from the home page search ("FACT", "cape town") to an airfield ICAO, or "". */
@@ -21,6 +23,7 @@ function resolveAirfield(q: string | undefined, airfields: { icao: string; iata:
 }
 
 export default async function CharterPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  if (!isCharterEnabled()) notFound(); // hidden for now: an old link lands on the 404 page
   const [airfields, session, sp] = await Promise.all([listAirfields(), getSession(), searchParams]);
   const user = session ? await db.user.findUnique({ where: { id: session.sub }, select: { firstName: true, lastName: true, email: true, phone: true, homeAirfieldIcao: true } }) : null;
 

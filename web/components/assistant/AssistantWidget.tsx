@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { safeNextPath, type Role } from "@/lib/roles";
+import { isCharterEnabled } from "@/lib/features";
 
 interface Msg {
   id: number;
@@ -19,8 +20,8 @@ const MAX_STORED = 30;
 const MAX_INPUT = 600;
 
 const SUGGESTIONS: Record<Role | "guest", string[]> = {
-  guest: ["How do empty legs work?", "Take me to the charter page", "What does a CPL involve?", "I'm a pilot. How do I get started?"],
-  PASSENGER: ["Find me an empty leg deal", "Help me plan a charter", "How do I check my booking?"],
+  guest: ["How do empty legs work?", isCharterEnabled() ? "Take me to the charter page" : "Show me empty leg deals", "What does a CPL involve?", "I'm a pilot. How do I get started?"],
+  PASSENGER: ["Find me an empty leg deal", isCharterEnabled() ? "Help me plan a charter" : "How do empty legs work?", "How do I check my booking?"],
   PILOT: ["How do I import my logbook?", "How do I add my licence?", "What is my reputation score?"],
   OPERATOR: ["Post a crew request", "Publish an empty leg", "How does the bench work?"],
 };

@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { primaryBtn, primaryBtnSm } from "@/components/ui/Field";
 import { EASE_LUXE } from "@/lib/animations";
 import { ROLE_LABEL, type Role } from "@/lib/roles";
+import { isCharterEnabled } from "@/lib/features";
 
 interface NavLink {
   href: string;
@@ -60,8 +61,14 @@ export function Navbar({ session, demoSwitcher }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const links = session ? LINKS[session.role] : PUBLIC_LINKS;
-  const cta = session ? CTA[session.role] : { href: "/auth/signup", label: "Get started" };
+  // While charter is switched off, every "Charter" link becomes "Empty legs" (see lib/features.ts).
+  const charterOn = isCharterEnabled();
+  const links = (session ? LINKS[session.role] : PUBLIC_LINKS).map((l) => (l.href === "/charter" && !charterOn ? { href: "/empty-legs", label: "Empty legs" } : l));
+  const cta = session
+    ? !charterOn && CTA[session.role].href === "/charter"
+      ? { href: "/empty-legs", label: "Find empty legs" }
+      : CTA[session.role]
+    : { href: "/auth/signup", label: "Get started" };
 
   // The mobile menu closes on navigation and on Escape, and the page behind it doesn't scroll while it is open.
   useEffect(() => setOpen(false), [pathname]);

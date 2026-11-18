@@ -2,6 +2,7 @@
 // WhatsApp is gated on its token: without the key it logs a dry-run instead of sending, so the app
 // works in dev and never breaks a request if email is down. Never throws.
 import { formatZar } from "@/lib/empty-legs-shared";
+import { isCharterEnabled } from "@/lib/features";
 
 const RESEND_URL = "https://api.resend.com/emails";
 // Resend lets you send from this address to your own account email with no domain verification —
@@ -122,12 +123,18 @@ export function buildWelcomeEmail(p: { firstName: string; role: WelcomeRole }): 
     cta = { href: siteUrl("/operator/dashboard"), label: "Open my dashboard" };
   } else {
     intro = "Your account is ready. You can now:";
-    steps = [
-      ["Request a charter.", "Build your trip and get an instant estimate in rand. An operator then confirms a firm price."],
-      ["Browse empty legs.", "Repositioning flights sold per seat at up to 75% off."],
-      ["Track your requests.", "Everything you book or request appears under My bookings."],
-    ];
-    cta = { href: siteUrl("/charter"), label: "Plan a trip" };
+    steps = isCharterEnabled()
+      ? [
+          ["Request a charter.", "Build your trip and get an instant estimate in rand. An operator then confirms a firm price."],
+          ["Browse empty legs.", "Repositioning flights sold per seat at up to 75% off."],
+          ["Track your requests.", "Everything you book or request appears under My bookings."],
+        ]
+      : [
+          ["Browse empty legs.", "Private repositioning flights sold per seat at up to 75% off the charter rate."],
+          ["Filter by route and date.", "Pick where you're flying from and to, and when."],
+          ["Track your bookings.", "Everything you book appears under My bookings."],
+        ];
+    cta = isCharterEnabled() ? { href: siteUrl("/charter"), label: "Plan a trip" } : { href: siteUrl("/empty-legs"), label: "Browse empty legs" };
   }
   const html = shell(
     `<p style="font-size:16px">Welcome aboard, ${escapeHtml(name)}.</p>

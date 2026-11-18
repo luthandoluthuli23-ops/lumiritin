@@ -3,15 +3,26 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { flightCardVariant, jetCardHover, staggerContainer, trackSpotlight } from "@/lib/animations";
+import { isCharterEnabled } from "@/lib/features";
+
+const PASSENGER_PORTAL = isCharterEnabled()
+  ? {
+      eyebrow: "Passengers",
+      title: "Fly private, on demand",
+      body: "Charter an aircraft anywhere in South Africa and get an instant estimate. Request in under a minute.",
+      cta: "Request a charter quote",
+      href: "/charter",
+    }
+  : {
+      eyebrow: "Passengers",
+      title: "Fly private for less",
+      body: "Book seats on private repositioning flights across South Africa at up to 75% off the charter rate.",
+      cta: "Browse empty legs",
+      href: "/empty-legs",
+    };
 
 const PORTALS = [
-  {
-    eyebrow: "Passengers",
-    title: "Fly private, on demand",
-    body: "Charter an aircraft anywhere in South Africa and get an instant estimate. Request in under a minute.",
-    cta: "Request a charter quote",
-    href: "/charter",
-  },
+  PASSENGER_PORTAL,
   {
     eyebrow: "Operators",
     title: "Fill every sector",
