@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 // The operator page. Everything here describes the operator portal as it works today (app/operator/*), nothing more.
 const FEATURES = [
   { title: "Overview", body: "Your fleet, crew and requests on one dashboard, the moment you sign in." },
-  { title: "Manage your pilots", body: "List your own crew, see each pilot's live reputation, and dispatch them first for your own flights." },
+  { title: "Crew roster", body: "Your own pilots and cabin crew in one roster: see each one's live reputation and availability, and dispatch them first for your own flights." },
   { title: "Crew requests in minutes", body: "Describe the flight and the role. Qualified, available crew are ranked with transparent scoring and the top three are pinged, with 10 minutes each to accept." },
-  { title: "Insights", body: "How your crewing performs, and how your pilots rank." },
+  { title: "Insights", body: "Your own statistics: how your crewing performs, and how your pilots rank." },
   { title: "Fleet and empty legs", body: "Register your aircraft, and turn repositioning flights into seats passengers can book." },
   { title: "Bench", body: "Offer idle pilots to other operators and accrue a share when they fly a contract job." },
 ];
@@ -69,8 +69,8 @@ export default function OperatorsPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-gold">Private operators</p>
             <h2 className="mt-3 font-display text-3xl text-ivory">Your own aircraft, no AOC</h2>
             <p className="mt-3 text-slate-tac">
-              Own or manage an aircraft privately? Sign up as a private operator: no AOC number needed. You get the same tools to manage your aircraft and
-              pilots and to find crew when you need them.
+              Own or manage an aircraft privately? Sign up as a private operator: no AOC number needed. Create your own operator profile, keep your
+              aircraft and your own pilots on it, and track your own statistics in Insights. When you need crew, the same request tools are yours.
             </p>
             <Link href="/auth/signup?role=operator" className={`${btn} mt-6 border border-white/20 text-ivory hover:border-gold/60`}>Sign up as a private operator</Link>
           </div>

@@ -26,24 +26,26 @@ export const SITE_CONTACT = {
 } as const;
 
 /**
- * Who is behind Lumiritin (shown on /about and in the legal pages). Company name, registration and the "why" story were
- * given by the owner on 2026-11-18; anything still in [BRACKETS] is a placeholder: these are facts about real people
- * and a real company, so they must never be guessed.
+ * Who is behind Lumiritin (shown on /about and in the legal pages). Given by the owner on 2026-11-18; anything still in
+ * [BRACKETS] is a placeholder: these are facts about real people and a real company, so they must never be guessed.
  */
 export const COMPANY = {
-  founderName: "[FOUNDER_NAME]",
-  founderBackground: "[FOUNDER_BACKGROUND]",
-  whyStarted:
-    "Lumiritin started with two frustrations we kept seeing. Good pilots losing evenings to re-typing logbooks and chasing " +
-    "paperwork, and pilots with hours to spare and no easy way to pick up a flight around their day job. So we built one " +
-    "place for both: your licence, medical and logbook kept current without the admin, and quick flying work near your " +
-    "home airfield whenever you want it. Less paperwork. More flying.",
+  founderName: "Luthando Luthuli",
+  founderBackground: "a student pilot",
   companyName: "Lumiritin Aviation",
   companyRegistration: "2026/770269/07",
-  cityProvince: "[CITY_PROVINCE]",
+  cityProvince: "Pietermaritzburg, KwaZulu-Natal",
   /** POPIA Information Officer (name and contact) for privacy requests. */
   informationOfficer: "[INFORMATION_OFFICER]",
 } as const;
+
+/** "Our story" on /about, in the owner's own words (2026-11-18). One string per paragraph. */
+export const OUR_STORY = [
+  "Lumiritin began at the aero club in Pietermaritzburg. Luthando Luthuli, a student pilot, kept seeing the same thing there. Pilots sat with their logbooks open, copying hours line by line, adding up totals by hand and hoping nothing had been missed. Every flight meant more paperwork, and one wrong entry could cause trouble at a renewal or a job interview.",
+  "So we set out to make it simple. With Lumiritin you snap a picture of your logbook page and your hours update. No retyping, no recounting.",
+  "The more time we spent around the club, the more we noticed a second problem: operators struggling to find crew at short notice, and good pilots and cabin crew missing out on work. Now an operator sends out a request, available flight and cabin crew respond, and Lumi ranks the top three for the job.",
+  "Made by the aviation community, for the aviation community.",
+] as const;
 
 /** Stated on /about and in the footer, word for word. */
 export const NOT_AN_OPERATOR = "Lumiritin is a booking and credentialing platform, not an air operator.";
