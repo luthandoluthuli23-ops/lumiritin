@@ -92,22 +92,25 @@ export function createHeroTimeline(root: HTMLElement, radarOrigin = "820 350"): 
     const path = root.querySelector<SVGPathElement>("[data-flightpath]");
     const plane = root.querySelector<SVGGElement>("[data-plane]");
     const length = path?.getTotalLength() ?? 0;
+    // Copy is only animated if a hero still marks it (the pilot homepage renders its copy visible on first paint).
+    const lines = root.querySelectorAll("[data-hero-line]");
+    const fades = root.querySelectorAll("[data-hero-fade]");
 
     if (prefersReducedMotion()) {
-      gsap.set("[data-hero-line], [data-hero-fade]", { opacity: 1, y: 0 });
+      if (lines.length || fades.length) gsap.set([...lines, ...fades], { opacity: 1, y: 0 });
       if (path) gsap.set(path, { strokeDasharray: "none" });
       if (plane && path) placePlane(path, plane, 0.62);
       return;
     }
 
-    gsap.set("[data-hero-line]", { yPercent: 110, opacity: 0 });
-    gsap.set("[data-hero-fade]", { y: 24, opacity: 0 });
+    if (lines.length) gsap.set(lines, { yPercent: 110, opacity: 0 });
+    if (fades.length) gsap.set(fades, { y: 24, opacity: 0 });
     if (path) gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
     if (plane) gsap.set(plane, { opacity: 0 });
 
     const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
-    tl.to("[data-hero-line]", { yPercent: 0, opacity: 1, duration: 1.1, stagger: 0.14 })
-      .to("[data-hero-fade]", { y: 0, opacity: 1, duration: 0.9, stagger: 0.12 }, "-=0.6");
+    if (lines.length) tl.to(lines, { yPercent: 0, opacity: 1, duration: 1.1, stagger: 0.14 });
+    if (fades.length) tl.to(fades, { y: 0, opacity: 1, duration: 0.9, stagger: 0.12 }, lines.length ? "-=0.6" : 0);
 
     if (path && plane) {
       const progress = { p: 0 };

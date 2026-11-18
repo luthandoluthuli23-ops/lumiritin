@@ -8,7 +8,7 @@ beforeEach(() => {
   delete process.env.APP_BASE_URL;
   delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
   delete process.env.RESEND_API_KEY;
-  delete process.env.NEXT_PUBLIC_CHARTER_ENABLED;
+  delete process.env.CHARTER_PUBLIC;
 });
 afterEach(() => {
   process.env = { ...saved };
@@ -46,7 +46,7 @@ describe("welcome email", () => {
     assert.match(pax.html, /href="https:\/\/lumiritin\.vercel\.app\/empty-legs"/);
     assert.match(pax.html, /empty legs/i);
     assert.ok(!/\/charter|request a charter/i.test(pax.html + pax.text), "no charter while it is switched off");
-    process.env.NEXT_PUBLIC_CHARTER_ENABLED = "1";
+    process.env.CHARTER_PUBLIC = "true";
     const paxCharter = buildWelcomeEmail({ firstName: "Thandi", role: "PASSENGER" });
     assert.match(paxCharter.html, /href="https:\/\/lumiritin\.vercel\.app\/charter"/);
     assert.match(paxCharter.html, /Request a charter/);

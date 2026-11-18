@@ -8,7 +8,7 @@ import { ICAO_RE } from "@/lib/airfields";
 import { MAX_MULTI_LEGS, aircraftClass, computeQuote, legDistanceNm } from "@/lib/charter";
 import { toE164 } from "@/lib/phone";
 import { clientIp, isRateLimited } from "@/lib/rate-limit";
-import { isCharterEnabled } from "@/lib/features";
+import { isCharterEnabled, servedAirfields } from "@/lib/features";
 import { getSession } from "@/lib/session";
 import { sastDate } from "@/lib/empty-legs-shared";
 
@@ -93,6 +93,10 @@ export async function POST(req: NextRequest) {
   const byIcao = new Map(airfields.map((a) => [a.icao, a]));
   const unknown = codes.filter((c) => !byIcao.has(c));
   if (unknown.length) return fail(422, "unknown_airfield", [{ path: "legs", message: `unknown airfield: ${unknown.join(", ")}` }]);
+  // Only airfields we actually serve can be booked; the others are listed as "Coming soon" in the UI.
+  const served = servedAirfields();
+  const notServed = codes.filter((c) => !served.includes(c));
+  if (notServed.length) return fail(422, "airfield_not_served", [{ path: "legs", message: `coming soon, not yet served: ${notServed.join(", ")}` }]);
 
   // Estimate. Computed here from our own data; the client's preview is never trusted.
   const spec = aircraftClass(input.aircraftClass)!;

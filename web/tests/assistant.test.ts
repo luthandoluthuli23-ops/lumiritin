@@ -6,7 +6,7 @@ import { requiredRole } from "../lib/roles";
 const TODAY = "2026-11-09";
 
 describe("charter switched off (the default)", () => {
-  beforeEach(() => delete process.env.NEXT_PUBLIC_CHARTER_ENABLED);
+  beforeEach(() => delete process.env.CHARTER_PUBLIC);
 
   it("is not offered to the model", () => {
     assert.ok(!availablePageKeys().includes("charter"));
@@ -21,8 +21,8 @@ describe("charter switched off (the default)", () => {
 });
 
 describe("assistant pages (charter switched on)", () => {
-  beforeEach(() => (process.env.NEXT_PUBLIC_CHARTER_ENABLED = "1"));
-  afterEach(() => delete process.env.NEXT_PUBLIC_CHARTER_ENABLED);
+  beforeEach(() => (process.env.CHARTER_PUBLIC = "true"));
+  afterEach(() => delete process.env.CHARTER_PUBLIC);
 
   it("offers charter again", () => {
     assert.ok(availablePageKeys().includes("charter"));

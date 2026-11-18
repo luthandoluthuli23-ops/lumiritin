@@ -4,7 +4,7 @@
 // Hard gates (a pilot failing ANY gate is excluded, and the reasons are returned):
 //   1. Pool access      own roster, freelancer, or shared to the pool AND the requester contributes to it
 //   2. Availability     AVAILABLE for the whole job window (BOOKED and OFF are ignored completely)
-//   3. Type rating      exact match for every required aircraft type, SACAA-verified, valid through the job
+//   3. Type rating      exact match for every required aircraft type, checked against SACAA records, valid through the job
 //   4. Licence          valid through the job, verified, no verifier flags, verification not stale
 //   5. Medical          at least one medical of the required class, valid through the job
 //   6. Radius           within the pilot's own stated travel radius (if they set one)
@@ -93,7 +93,7 @@ export const EXCLUSION_LABEL: Record<ExclusionCode, string> = {
   BOOKED: "Booked or blocked for this period",
   OFF: "Not marked available",
   NO_RATING: "No matching type rating",
-  RATING_UNVERIFIED: "Type rating not yet verified by SACAA",
+  RATING_UNVERIFIED: "Type rating not yet checked against SACAA records",
   RATING_EXPIRES: "Type rating expires before the job ends",
   NO_LICENCE: "No licence on record",
   LICENCE_EXPIRES: "Licence expires before the job ends",
@@ -281,7 +281,7 @@ function toMatch(c: CandidateInput, req: MatchRequest): Match {
   const credentialValue = !verified
     ? "Self-declared"
     : c.licence?.lastVerificationMethod === "SACAA_PORTAL"
-      ? "SACAA-verified"
+      ? "Checked against SACAA records"
       : c.licence?.lastVerificationMethod === "LUMI_DOCUMENT"
         ? "Lumi-verified"
         : "Verified";

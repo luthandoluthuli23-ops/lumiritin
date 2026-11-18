@@ -1,22 +1,6 @@
 import Link from "next/link";
 import { isCharterEnabled } from "@/lib/features";
 
-// Major commercial airports across South Africa. ICAO codes match lib/airfields.ts so the /charter links prefill.
-const AIRFIELD_LINKS = [
-  { icao: "FAOR", city: "O.R. Tambo, JHB" },
-  { icao: "FALA", city: "Lanseria, JHB" },
-  { icao: "FACT", city: "Cape Town" },
-  { icao: "FADN", city: "King Shaka, Durban" },
-  { icao: "FAPE", city: "Gqeberha (PE)" },
-  { icao: "FAPM", city: "Pietermaritzburg" },
-  { icao: "FABL", city: "Bloemfontein" },
-  { icao: "FAEL", city: "East London" },
-  { icao: "FAGG", city: "George" },
-  { icao: "FAKM", city: "Kimberley" },
-  { icao: "FAKN", city: "Kruger Mpumalanga" },
-  { icao: "FAUP", city: "Upington" },
-];
-
 export function Footer() {
   const charterOn = isCharterEnabled();
   // Public by design (NEXT_PUBLIC_*). Hidden until configured so no placeholder number is ever shown.
@@ -27,28 +11,15 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-6">
         <div className="md:col-span-1">
           <p className="font-display text-3xl text-gold-light">Lumiritin</p>
-          <p className="mt-3 text-sm text-slate-tac">{charterOn ? "Private aircraft charter for South Africa, with SACAA-verified crew." : "Private aviation for South Africa: empty-leg seats and SACAA-verified crew."}</p>
+          <p className="mt-3 text-sm text-slate-tac">The free wallet for South African pilots: licence, medical and logbook in one place.</p>
         </div>
 
-        <nav aria-label="Airfields" className="md:col-span-2">
-          <h2 className="text-xs uppercase tracking-[0.25em] text-gold">Fly from</h2>
-          <ul className="mt-4 grid grid-cols-1 gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
-            {AIRFIELD_LINKS.map((a) => (
-              <li key={a.icao}>
-                <Link href={`${charterOn ? "/charter" : "/empty-legs"}?from=${a.icao}`} className="inline-flex items-center text-slate-tac transition hover:text-ivory pointer-coarse:min-h-11">
-                  <span className="font-mono text-ivory">{a.icao}</span> · {a.city}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <nav aria-label="Platform">
+        <nav aria-label="Platform" className="md:col-span-3">
           <h2 className="text-xs uppercase tracking-[0.25em] text-gold">Platform</h2>
           <ul className="mt-4 space-y-1 text-sm text-slate-tac">
-            <li><Link href={charterOn ? "/charter" : "/empty-legs"} className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">{charterOn ? "Helicopter charter" : "Empty leg deals"}</Link></li>
-            <li><Link href="/auth/signup?role=operator" className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">For operators</Link></li>
             <li><Link href="/auth/signup?role=pilot" className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">For pilots</Link></li>
+            <li><Link href="/verification" className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">How verification works</Link></li>
+            {charterOn && <li><Link href="/charter" className="inline-flex items-center hover:text-ivory pointer-coarse:min-h-11">Helicopter charter</Link></li>}
           </ul>
         </nav>
 

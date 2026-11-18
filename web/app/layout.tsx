@@ -7,17 +7,14 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Providers } from "@/components/Providers";
 import { isAssistantConfigured } from "@/lib/assistant";
 import { getSession } from "@/lib/session";
-import { isCharterEnabled } from "@/lib/features";
 import "./globals.css";
 
 const display = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-cormorant" });
 const sans = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Lumiritin — Private aviation, South Africa",
-  description: isCharterEnabled()
-    ? "Private aircraft charter and SACAA-verified crew credentials across South Africa."
-    : "Empty-leg flights and SACAA-verified crew credentials across South Africa.",
+  title: "Lumiritin — The free pilot wallet",
+  description: "Your licence, medical and logbook in one place, with WhatsApp warnings before anything expires. Free for pilots, always.",
 };
 
 // viewport-fit=cover lets the page extend under notches/home indicators (the pt-safe/pb-safe utilities keep content clear of them).

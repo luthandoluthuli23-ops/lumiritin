@@ -6,7 +6,7 @@ import { listAirfields } from "@/lib/airfield-db";
 import { ICAO_RE } from "@/lib/airfields";
 import { sastDate } from "@/lib/empty-legs-shared";
 import { getSession } from "@/lib/session";
-import { isCharterEnabled } from "@/lib/features";
+import { isCharterEnabled, servedAirfields } from "@/lib/features";
 
 // While charter is switched off the page is a 404, so it mustn't advertise itself in the tab title or search snippets.
 export const metadata: Metadata = isCharterEnabled()
@@ -28,6 +28,7 @@ export default async function CharterPage({ searchParams }: { searchParams: Prom
   const user = session ? await db.user.findUnique({ where: { id: session.sub }, select: { firstName: true, lastName: true, email: true, phone: true, homeAirfieldIcao: true } }) : null;
 
   const today = sastDate(new Date().toISOString());
+  const served = servedAirfields();
   const pax = Number(sp.pax);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") && sp.date! >= today ? sp.date! : "";
 
@@ -44,12 +45,14 @@ export default async function CharterPage({ searchParams }: { searchParams: Prom
         airfields={airfields}
         today={today}
         initial={{
-          from: resolveAirfield(sp.from, airfields) || user?.homeAirfieldIcao || "",
-          to: resolveAirfield(sp.to, airfields),
+          // Only a served airfield can be pre-filled; anything else is "Coming soon".
+          from: [resolveAirfield(sp.from, airfields), user?.homeAirfieldIcao ?? ""].find((c) => c && served.includes(c)) ?? "",
+          to: served.includes(resolveAirfield(sp.to, airfields)) ? resolveAirfield(sp.to, airfields) : "",
           date,
           pax: Number.isInteger(pax) && pax >= 1 && pax <= 12 ? pax : 2,
         }}
         contact={{ name: user ? `${user.firstName} ${user.lastName}` : "", email: user?.email ?? "", phone: user?.phone ?? "" }}
+        served={served}
       />
     </main>
   );

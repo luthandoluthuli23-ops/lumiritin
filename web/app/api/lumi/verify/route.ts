@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   if (!result.ok || !result.extraction) {
     const msg =
       result.error === "parse_failed"
-        ? "Lumi couldn't read that document. Try a clearer scan or the official SACAA PDF."
+        ? "Lumi couldn't read that document. Try a clearer scan, or the licence PDF you downloaded from SACAA."
         : "Lumi is temporarily unavailable. Please try again shortly.";
     return NextResponse.json({ ok: false, error: result.error, message: msg }, { status: result.error === "parse_failed" ? 422 : 502 });
   }

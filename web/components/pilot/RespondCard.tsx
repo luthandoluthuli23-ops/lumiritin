@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { aircraftName, formatWindow } from "@/lib/empty-legs-shared";
 import { ghostBtn, primaryBtn } from "@/components/ui/Field";
+import { HELP_FALLBACK } from "@/lib/site-contact";
 
 interface Ping {
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
@@ -44,21 +45,24 @@ function useCountdown(seconds: number) {
   return left;
 }
 
-export function RespondCard({ token }: { token: string }) {
-  const [ping, setPing] = useState<Ping | null>(null);
-  const [missing, setMissing] = useState(false);
+/** `initial` is loaded on the server (null = the token doesn't exist), so the card renders real content immediately. */
+export function RespondCard({ token, initial }: { token: string; initial: Ping | null }) {
+  const [ping, setPing] = useState<Ping | null>(initial);
+  const [missing, setMissing] = useState(initial === null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  // Refreshes after a response or when the countdown ends. A failed refresh keeps what's shown and says how to get help.
   const load = useCallback(async () => {
-    const res = await fetch(`/api/crew-pings/${encodeURIComponent(token)}`, { cache: "no-store" });
-    if (res.status === 404) return setMissing(true);
-    if (res.ok) setPing(await res.json());
+    try {
+      const res = await fetch(`/api/crew-pings/${encodeURIComponent(token)}`, { cache: "no-store" });
+      if (res.status === 404) return setMissing(true);
+      if (res.ok) setPing(await res.json());
+      else setMessage(`We couldn't refresh this request. ${HELP_FALLBACK}`);
+    } catch {
+      setMessage(`We couldn't refresh this request. ${HELP_FALLBACK}`);
+    }
   }, [token]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const left = useCountdown(ping?.secondsLeft ?? 0);
   // When the clock runs out, re-ask the server so the page shows the true final state.
@@ -79,8 +83,7 @@ export function RespondCard({ token }: { token: string }) {
     }
   }
 
-  if (missing) return <p className="glass rounded-3xl p-8 text-slate-tac">This link isn&rsquo;t valid or has been removed.</p>;
-  if (!ping) return <p className="text-slate-tac">Loading…</p>;
+  if (missing || !ping) return <p className="glass rounded-3xl p-8 text-slate-tac">This link isn&rsquo;t valid or has been removed. {HELP_FALLBACK}</p>;
 
   const open = ping.status === "PENDING" && left > 0;
   const mm = String(Math.floor(left / 60)).padStart(2, "0");

@@ -30,7 +30,7 @@ export default async function PilotInsightsPage() {
 
   const tips: string[] = [];
   if (rep.components.reliability < 70) tips.push("Respond to crew pings quickly and only accept duties you can fly — reliability is the biggest part of your score.");
-  if (rep.components.compliance < 80) tips.push("Keep your licence SACAA-verified and in date, and renew your medical before it lapses.");
+  if (rep.components.compliance < 80) tips.push("Keep your licence checked against SACAA records and in date, and renew your medical before it lapses.");
   if (rep.components.experience < 60) tips.push("Log more hours and complete more duties through the platform to build experience.");
   if (s.offersReceived === 0) tips.push("Ask operators to add you to their roster so you start receiving duty offers.");
 

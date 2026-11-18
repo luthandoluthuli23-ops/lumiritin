@@ -12,6 +12,8 @@ interface Props {
   label?: string;
   required?: boolean;
   name?: string;
+  /** Only these ICAO codes can be chosen (others are "Coming soon"); the nearest-airfield search uses only these. */
+  served?: readonly string[];
 }
 
 type Status =
@@ -31,7 +33,7 @@ const MESSAGES: Record<number, string> = {
  * and shows how far away it is. The manual search is always available, and is the fallback if the user declines.
  * Coordinates are used in the browser only; they are never sent to the server.
  */
-export function NearestAirfieldPicker({ airfields, value, onChange, label = "Departing from", required, name }: Props) {
+export function NearestAirfieldPicker({ airfields, value, onChange, label = "Departing from", required, name, served }: Props) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   function detect() {
@@ -43,7 +45,8 @@ export function NearestAirfieldPicker({ airfields, value, onChange, label = "Dep
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         const here = { lat: coords.latitude, lng: coords.longitude };
-        const nearest = isValidCoordinates(here) ? nearestAirfield(here, airfields) : null;
+        const pool = served ? airfields.filter((a) => served.includes(a.icao)) : airfields;
+        const nearest = isValidCoordinates(here) ? nearestAirfield(here, pool) : null;
         if (!nearest) {
           setStatus({ kind: "problem", message: "No airfields are available to compare against." });
           return;
@@ -64,7 +67,7 @@ export function NearestAirfieldPicker({ airfields, value, onChange, label = "Dep
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
-          <AirfieldAutocomplete airfields={airfields} value={value} onChange={onChange} label={label} required={required} name={name} />
+          <AirfieldAutocomplete airfields={airfields} value={value} onChange={onChange} label={label} required={required} name={name} served={served} />
         </div>
         <button
           type="button"

@@ -14,12 +14,15 @@ interface Props {
   exclude?: readonly string[];
   required?: boolean;
   name?: string;
+  /** When given, only these ICAO codes can be chosen; every other airfield is listed as "Coming soon". */
+  served?: readonly string[];
 }
 
 const label = (a: AirfieldOption) => `${a.icao}${a.iata ? ` / ${a.iata}` : ""} · ${a.city}`;
 
 /** Accessible combobox over a known list of airfields: matches ICAO, IATA, city and airport name. */
-export function AirfieldAutocomplete({ airfields, value, onChange, label: fieldLabel, placeholder = "ICAO, IATA or city", exclude = [], required, name }: Props) {
+export function AirfieldAutocomplete({ airfields, value, onChange, label: fieldLabel, placeholder = "ICAO, IATA or city", exclude = [], required, name, served }: Props) {
+  const isServed = (a: AirfieldOption) => !served || served.includes(a.icao);
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const selected = airfields.find((a) => a.icao === value);
@@ -34,12 +37,15 @@ export function AirfieldAutocomplete({ airfields, value, onChange, label: fieldL
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const pool = airfields.filter((a) => !exclude.includes(a.icao));
+    // Served airfields first; "Coming soon" ones stay visible below them.
+    const pool = airfields.filter((a) => !exclude.includes(a.icao)).sort((a, b) => Number(isServed(b)) - Number(isServed(a)));
     if (!q || (selected && query === label(selected))) return pool;
     return pool.filter((a) => [a.icao, a.iata ?? "", a.city, a.name].some((s) => s.toLowerCase().includes(q)));
-  }, [airfields, exclude, query, selected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [airfields, exclude, query, selected, served]);
 
   function choose(a: AirfieldOption) {
+    if (!isServed(a)) return; // "Coming soon": listed, not selectable
     onChange(a.icao);
     setQuery(label(a));
     setOpen(false);
@@ -102,14 +108,16 @@ export function AirfieldAutocomplete({ airfields, value, onChange, label: fieldL
               id={`${listId}-${a.icao}`}
               role="option"
               aria-selected={a.icao === value}
+              aria-disabled={!isServed(a) || undefined}
               onMouseDown={(e) => {
                 e.preventDefault(); // keep focus so blur does not fire before the click registers
                 choose(a);
               }}
               onMouseEnter={() => setActive(i)}
-              className={`cursor-pointer px-4 py-2.5 text-sm ${i === active ? "bg-gold/15 text-ivory" : "text-slate-tac"}`}
+              className={`px-4 py-2.5 text-sm ${isServed(a) ? "cursor-pointer" : "cursor-not-allowed opacity-60"} ${i === active ? "bg-gold/15 text-ivory" : "text-slate-tac"}`}
             >
               <span className="font-medium text-ivory">{a.icao}</span>
+              {!isServed(a) && <span className="float-right text-xs uppercase tracking-widest text-slate-tac">Coming soon</span>}
               {a.iata && <span className="text-slate-tac"> / {a.iata}</span>} · {a.city}
               <span className="block text-xs text-slate-tac">{a.name}</span>
             </li>

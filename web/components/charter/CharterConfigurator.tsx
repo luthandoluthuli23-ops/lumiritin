@@ -33,12 +33,14 @@ interface Props {
   today: string; // YYYY-MM-DD in SAST
   initial: { from: string; to: string; date: string; pax: number };
   contact: { name: string; email: string; phone: string };
+  /** ICAO codes charter is offered at; the rest show as "Coming soon". */
+  served: readonly string[];
 }
 
 const itemVariants = flightCardVariant;
 const container = staggerContainer(0.06, 0.05);
 
-export function CharterConfigurator({ airfields, today, initial, contact }: Props) {
+export function CharterConfigurator({ airfields, today, initial, contact, served }: Props) {
   const [tripType, setTripType] = useState<TripType>("ONE_WAY");
   const [origin, setOrigin] = useState(initial.from);
   const [stops, setStops] = useState<Stop[]>([{ to: initial.to, date: initial.date }]);
@@ -155,7 +157,7 @@ export function CharterConfigurator({ airfields, today, initial, contact }: Prop
           </div>
 
           <div className="glass mt-5 space-y-5 rounded-3xl p-6">
-            <NearestAirfieldPicker airfields={airfields} value={origin} onChange={setOrigin} label="Departing from" required />
+            <NearestAirfieldPicker airfields={airfields} served={served} value={origin} onChange={setOrigin} label="Departing from" required />
 
             <AnimatePresence initial={false}>
               {stops.map((s, i) => {
@@ -165,6 +167,7 @@ export function CharterConfigurator({ airfields, today, initial, contact }: Prop
                   <motion.div key={i} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
                     <AirfieldAutocomplete
                       airfields={airfields}
+                      served={served}
                       value={s.to}
                       onChange={(to) => setStop(i, { to })}
                       label={tripType === "MULTI_LEG" ? `Leg ${i + 1}: ${from || "…"} to` : "Flying to"}

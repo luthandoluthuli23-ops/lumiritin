@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ghostBtn, pageCls, primaryBtn } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { isCharterEnabled } from "@/lib/features";
 
 export default function NotFound() {
   return (
@@ -11,8 +10,8 @@ export default function NotFound() {
         <Link href="/" className={`${primaryBtn} inline-flex items-center justify-center`}>
           Back to home
         </Link>
-        <Link href={isCharterEnabled() ? "/charter" : "/empty-legs"} className={`${ghostBtn} inline-flex items-center justify-center`}>
-          {isCharterEnabled() ? "Plan a charter" : "Find empty legs"}
+        <Link href="/wallet" className={`${ghostBtn} inline-flex items-center justify-center`}>
+          Open my wallet
         </Link>
       </div>
     </main>

@@ -143,7 +143,7 @@ export async function applyLumiExtraction(
   const reasons: string[] = [];
   if (!extraction.isExpectedDocument) reasons.push("This doesn't look like the expected licence document.");
   if (!extraction.licenceNumber) reasons.push("No licence number could be read from the document.");
-  if (extraction.confidence < CONFIDENCE_FLOOR) reasons.push("The scan wasn't clear enough to verify confidently — try a sharper copy or the official SACAA PDF.");
+  if (extraction.confidence < CONFIDENCE_FLOOR) reasons.push("The scan wasn't clear enough to verify confidently — try a sharper copy, or the licence PDF you downloaded from SACAA.");
   if (opts.expectedName && !nameMatches(extraction.holderName, opts.expectedName)) {
     reasons.push("The name on the document doesn't match your account name.");
   }

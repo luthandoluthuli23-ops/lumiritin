@@ -14,17 +14,20 @@ interface NavLink {
   label: string;
 }
 
+/** The one "Charter" item (only when CHARTER_PUBLIC is on). Aeroplane charter isn't offered yet, so it says so. */
+const CHARTER_MENU: { label: string; href: string | null }[] = [
+  { label: "Aeroplane", href: null },
+  { label: "Helicopter", href: "/charter" },
+];
+
+// Pilot-first: visitors see the wallet story. Charter, empty legs and operator sign-up keep their routes but aren't promoted.
 const PUBLIC_LINKS: NavLink[] = [
-  { href: "/charter", label: "Charter" },
-  { href: "/auth/signup?role=operator", label: "For operators" },
   { href: "/auth/signup?role=pilot", label: "For pilots" },
+  { href: "/verification", label: "Verification" },
 ];
 
 const LINKS: Record<Role, NavLink[]> = {
-  PASSENGER: [
-    { href: "/charter", label: "Charter" },
-    { href: "/dashboard/bookings", label: "My bookings" },
-  ],
+  PASSENGER: [{ href: "/dashboard/bookings", label: "My bookings" }],
   OPERATOR: [
     { href: "/operator/dashboard", label: "Dashboard" },
     { href: "/operator/fleet", label: "Fleet" },
@@ -39,7 +42,7 @@ const LINKS: Record<Role, NavLink[]> = {
 };
 
 const CTA: Record<Role, NavLink> = {
-  PASSENGER: { href: "/charter", label: "Request charter" },
+  PASSENGER: { href: "/dashboard/bookings", label: "My bookings" },
   OPERATOR: { href: "/operator/crewing/new", label: "Post crew request" },
   PILOT: { href: "/wallet", label: "Check credentials" },
 };
@@ -61,14 +64,12 @@ export function Navbar({ session, demoSwitcher }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // While charter is switched off, every "Charter" link becomes "Empty legs" (see lib/features.ts).
-  const charterOn = isCharterEnabled();
-  const links = (session ? LINKS[session.role] : PUBLIC_LINKS).map((l) => (l.href === "/charter" && !charterOn ? { href: "/empty-legs", label: "Empty legs" } : l));
-  const cta = session
-    ? !charterOn && CTA[session.role].href === "/charter"
-      ? { href: "/empty-legs", label: "Find empty legs" }
-      : CTA[session.role]
-    : { href: "/auth/signup", label: "Get started" };
+  // Charter appears only when CHARTER_PUBLIC is on, and only for visitors and passengers (lib/features.ts).
+  const showCharter = isCharterEnabled() && (!session || session.role === "PASSENGER");
+  const links = session ? LINKS[session.role] : PUBLIC_LINKS;
+  const cta = session ? CTA[session.role] : { href: "/auth/signup?role=pilot", label: "Create free wallet" };
+  const [charterOpen, setCharterOpen] = useState(false);
+  useEffect(() => setCharterOpen(false), [pathname]);
 
   // The mobile menu closes on navigation and on Escape, and the page behind it doesn't scroll while it is open.
   useEffect(() => setOpen(false), [pathname]);
@@ -115,6 +116,29 @@ export function Navbar({ session, demoSwitcher }: Props) {
           <Link href="/" className="inline-flex min-h-11 items-center font-display text-2xl font-semibold tracking-wide text-gold-light">Lumiritin</Link>
 
           <nav aria-label="Main" className="hidden items-center gap-1 text-sm text-slate-tac lg:flex">
+            {showCharter && (
+              <div className="relative" onKeyDown={(e) => e.key === "Escape" && setCharterOpen(false)}>
+                <button type="button" aria-expanded={charterOpen} aria-controls="charter-menu" onClick={() => setCharterOpen((o) => !o)} className={`${barLink} gap-1 ${pathname.startsWith("/charter") ? "bg-white/5 text-ivory" : ""}`}>
+                  Charter
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current" aria-hidden><path d="M5.5 7.5 10 12l4.5-4.5" stroke="currentColor" strokeWidth="1.6" fill="none" /></svg>
+                </button>
+                {charterOpen && (
+                  <ul id="charter-menu" className="absolute left-0 top-full mt-2 min-w-48 rounded-2xl border border-white/10 bg-obsidian p-2 shadow-xl">
+                    {CHARTER_MENU.map((c) => (
+                      <li key={c.label}>
+                        {c.href ? (
+                          <Link href={c.href} className={`${menuItem} text-ivory`}>{c.label}</Link>
+                        ) : (
+                          <span className={`${menuItem} justify-between text-slate-tac`} aria-disabled="true">
+                            {c.label} <span className="text-xs">Coming soon</span>
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             {links.map((l) => {
               // Links that differ only by query string (the two sign-up roles) have no single "current page".
               const on = !l.href.includes("?") && pathname === l.href;
@@ -159,6 +183,20 @@ export function Navbar({ session, demoSwitcher }: Props) {
               <div className="max-h-[calc(100dvh-6.5rem)] space-y-1 overflow-y-auto overscroll-contain rounded-b-3xl border-t border-white/10 bg-obsidian p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 {session && <p className="px-3 pb-2 text-xs text-slate-tac">{session.name} · {ROLE_LABEL[session.role]}</p>}
                 <Link href={cta.href} onClick={() => setOpen(false)} className={`${primaryBtn} mb-2 flex w-full items-center justify-center sm:hidden`}>{cta.label}</Link>
+                {showCharter && (
+                  <div className="pb-1">
+                    <p className="px-3 pt-1 text-xs uppercase tracking-widest text-slate-tac">Charter</p>
+                    {CHARTER_MENU.map((c) =>
+                      c.href ? (
+                        <Link key={c.label} href={c.href} onClick={() => setOpen(false)} className={`${menuItem} pl-6 text-ivory`}>{c.label}</Link>
+                      ) : (
+                        <span key={c.label} aria-disabled="true" className={`${menuItem} justify-between pl-6 text-slate-tac`}>
+                          {c.label} <span className="text-xs">Coming soon</span>
+                        </span>
+                      ),
+                    )}
+                  </div>
+                )}
                 {links.map((l) => (
                   <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className={`${menuItem} text-ivory`}>{l.label}</Link>
                 ))}
