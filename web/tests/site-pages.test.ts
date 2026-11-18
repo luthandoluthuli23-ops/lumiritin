@@ -38,6 +38,9 @@ describe("about, contact and footer (Task 2)", () => {
       assert.equal(SITE_CONTACT.whatsappUrl, null);
       assert.equal(HELP_FALLBACK, "WhatsApp [PHONE] for help.");
     }
-    if (!process.env.NEXT_PUBLIC_CONTACT_EMAIL) assert.equal(SITE_CONTACT.email, "[CONTACT_EMAIL]");
+    if (!process.env.NEXT_PUBLIC_CONTACT_EMAIL) {
+      assert.equal(SITE_CONTACT.email, "hello@lumiritin.co.za");
+      assert.equal(SITE_CONTACT.emailUrl, "mailto:hello@lumiritin.co.za");
+    }
   });
 });

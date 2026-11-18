@@ -6,15 +6,17 @@ const env = (v: string | undefined) => (v && v.trim() ? v.trim() : null);
 /** WhatsApp / phone number in E.164, e.g. +27821234567 (NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164). */
 const whatsappE164 = env(process.env.NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164);
 
+/** Public contact email, given by the owner on 2026-11-18. */
+const CONTACT_EMAIL = env(process.env.NEXT_PUBLIC_CONTACT_EMAIL) ?? "hello@lumiritin.co.za";
+
 export const SITE_CONTACT = {
   /** What to print for the phone/WhatsApp number. */
   phoneDisplay: whatsappE164 ?? "[PHONE]",
   /** wa.me link, or null while the number is a placeholder. */
   whatsappUrl: whatsappE164 ? `https://wa.me/${whatsappE164.replace(/[^\d]/g, "")}` : null,
-  /** Public contact email (NEXT_PUBLIC_CONTACT_EMAIL). */
-  email: env(process.env.NEXT_PUBLIC_CONTACT_EMAIL) ?? "[CONTACT_EMAIL]",
-  /** mailto link, or null while the email is a placeholder. */
-  emailUrl: env(process.env.NEXT_PUBLIC_CONTACT_EMAIL) ? `mailto:${env(process.env.NEXT_PUBLIC_CONTACT_EMAIL)}` : null,
+  /** Public contact email (the owner's address; NEXT_PUBLIC_CONTACT_EMAIL overrides it). */
+  email: CONTACT_EMAIL,
+  emailUrl: `mailto:${CONTACT_EMAIL}`,
 } as const;
 
 /**
