@@ -24,6 +24,7 @@ const CHARTER_MENU: { label: string; href: string | null }[] = [
 const PUBLIC_LINKS: NavLink[] = [
   { href: "/auth/signup?role=pilot", label: "For pilots" },
   { href: "/verification", label: "Verification" },
+  { href: "/about", label: "About" },
 ];
 
 const LINKS: Record<Role, NavLink[]> = {
