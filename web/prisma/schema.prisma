@@ -214,6 +214,9 @@ model Person {
   lastCheckAt      DateTime?
   lastCheckResult  CheckResult?
   /// Short public code for /verify/[code]. Unguessable; reveals only name, licence type, state and date.
+  /// The last state the pilot was told about (WhatsApp/email). A different current state triggers one message.
+  notifiedState    String?
+  notifiedStateAt  DateTime?
   publicCode       String           @unique @default(dbgenerated("substr(replace((gen_random_uuid())::text, '-'::text, ''::text), 1, 12)"))
 
   credentials   Credential[]
@@ -532,7 +535,7 @@ model VerificationDocument {
 }
 
 // One row per reminder sent; the unique key stops duplicates and resets on renewal
-// (a new expiry date means a fresh set of 90/30/7 reminders).
+// (a new expiry date means a fresh set of 60/30/7 reminders). Each row is claimed BEFORE sending (lib/reminders.ts).
 model Notification {
   id            String   @id @default(cuid())
   personId      String

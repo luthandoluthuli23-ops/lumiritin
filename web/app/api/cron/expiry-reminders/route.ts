@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { runExpiryReminders } from "@/lib/reminders";
+import { runStateNotifications } from "@/lib/state-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,9 @@ export async function GET(req: NextRequest) {
   if (req.headers.get("authorization") !== `Bearer ${secret}`) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const result = await runExpiryReminders();
-  console.log(`[cron] expiry reminders: checked ${result.checked}, sent ${result.sent}`, result.byChannel);
-  return NextResponse.json({ ok: true, ...result });
+  console.log(`[cron] expiry reminders: checked ${result.checked}, sent ${result.sent}, skipped ${result.skipped}`, result.byChannel);
+  // State changes that happen just because time passed (EXPIRING, CHECK_OVERDUE) are announced here too.
+  const states = await runStateNotifications();
+  console.log("[cron] verification state messages:", states);
+  return NextResponse.json({ ok: true, ...result, stateMessages: states });
 }

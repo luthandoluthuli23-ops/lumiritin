@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
+import { syncStateNotification } from "@/lib/state-notifications";
 import { z } from "zod";
 import { COMPARED_FIELDS, decideSubmission } from "@/lib/pilot-verification";
 import { getReviewer } from "@/lib/reviewers";
@@ -21,5 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const r = await decideSubmission((await params).id, reviewer, parsed.data.decision, parsed.data.matches, parsed.data.note || null);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.error === "not_found" ? 404 : r.error === "own_submission" ? 403 : 409 });
+  // Tell the pilot if their state changed (after the response; idempotent, so a later daily run won't repeat it).
+  after(() => syncStateNotification(r.personId).catch((e) => console.error("[review] state message failed:", e)));
   return NextResponse.json({ ok: true, result: r.result });
 }

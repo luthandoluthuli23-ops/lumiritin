@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
+import { syncStateNotification } from "@/lib/state-notifications";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { withdrawVerificationConsent } from "@/lib/pilot-verification";
@@ -21,6 +22,7 @@ export async function DELETE(req: NextRequest) {
 
   if (parsed.data.scope === "sacaa_verification") {
     const r = await withdrawVerificationConsent(personId);
+    after(() => syncStateNotification(personId).catch((e) => console.error("[consent] state message failed:", e)));
     return NextResponse.json({ ok: true, ...r });
   }
   const r = await db.consent.updateMany({ where: { personId, scope: "whatsapp_notifications", revokedAt: null }, data: { revokedAt: new Date() } });

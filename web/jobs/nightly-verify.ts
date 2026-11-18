@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "../lib/db";
 import { runVerifier, type VerifiedRecord } from "../lib/verifier";
 import { recordCheck } from "../lib/verification-checks";
+import { syncStateNotification } from "../lib/state-notifications";
 import { compareProfile, resultFromLookup } from "../lib/verification-state";
 
 const DELAY_MS = Number(process.env.VERIFY_DELAY_MS ?? 5000);
@@ -131,6 +132,7 @@ async function main() {
       fieldsCompared: compared,
       error: result.error,
     });
+    await syncStateNotification(cred.personId).catch((e) => console.error("state message failed:", e));
 
     if (changes?.length) console.log(`${cred.licenceNumber}: ${changes.length} change(s)`);
     if (result.outcome === "BLOCKED") {

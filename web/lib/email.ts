@@ -153,15 +153,17 @@ export async function sendWelcomeEmail(p: { to: string; firstName: string; role:
   return sendEmail({ to: p.to, subject, html, text });
 }
 
-export async function sendCredentialVerifiedEmail(p: { to: string; name: string; credential: string; method: string; expires?: string | null }): Promise<{ ok: boolean; error?: string }> {
-  const label = p.method === "SACAA_PORTAL" ? "verified against the SACAA portal" : "verified by Lumi from your document";
+/** Sent when a pilot's verification state changes (lib/state-notifications.ts). */
+export async function sendStateChangeEmail(p: { to: string; name: string; state: string; detail: string }): Promise<{ ok: boolean; error?: string }> {
   const html = shell(
-    `<p style="font-size:16px">Hi ${escapeHtml(p.name.split(" ")[0] || p.name)},</p>
-     <p><b style="color:#e2b857">Lumi has confirmed your ${escapeHtml(p.credential)}.</b> It's now ${label}, and operators will see a verified badge on your profile.</p>
-     ${p.expires ? `<p style="font-size:14px;color:#8b97ab">Valid until ${escapeHtml(p.expires)}. We'll remind you before it expires.</p>` : ""}
-     <p style="margin-top:16px"><a href="${escapeHtml(siteUrl("/wallet"))}" style="color:#e2b857">View your credential wallet →</a></p>`,
+    `<p style="font-size:16px">Hi ${escapeHtml(p.name)},</p>
+     <p>Your verification status is now <b style="color:#e2b857">${escapeHtml(p.state)}</b>.</p>
+     <p style="font-size:14px;color:#8b97ab">${escapeHtml(p.detail)}</p>
+     <p style="margin-top:16px"><a href="${escapeHtml(siteUrl("/wallet/verify"))}" style="color:#e2b857">Open your wallet →</a></p>
+     <p style="margin-top:8px;font-size:13px;color:#8b97ab"><a href="${escapeHtml(siteUrl("/verification"))}" style="color:#8b97ab">What the states mean</a></p>`,
+    "You're receiving this because you have a Lumiritin pilot account.",
   );
-  return sendEmail({ to: p.to, subject: "Lumi has verified your credential ✓", html });
+  return sendEmail({ to: p.to, subject: `Your verification status: ${p.state}`, html, text: `Hi ${p.name},\n\nYour verification status is now ${p.state}.\n${p.detail}\n\n${siteUrl("/wallet/verify")}` });
 }
 
 export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {

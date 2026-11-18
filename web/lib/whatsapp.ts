@@ -1,33 +1,23 @@
-const GRAPH = "https://graph.facebook.com/v21.0";
+// WhatsApp message helpers, all sent through the provider interface in lib/messaging.ts (Meta Cloud API when
+// configured, a console logger otherwise). None of these throw: a WhatsApp failure must never break the caller.
+import { TEMPLATES, whatsappProvider, type WhatsAppProvider } from "./messaging";
 
-export const isWhatsappConfigured = () => Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
+export { isWhatsappConfigured } from "./messaging";
 
 /**
  * Sends a connectivity test using a template (default Meta's pre-approved "hello_world"), so an
  * operator can confirm their WhatsApp Cloud API credentials work before their own templates are
  * approved. The recipient must be a verified test number while the sender is on a Meta test number.
  */
-export async function sendTestWhatsapp(toE164: string): Promise<{ ok: boolean; error?: string }> {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!token || !phoneNumberId) return { ok: false, error: "not_configured" };
-  const template = process.env.WHATSAPP_TEST_TEMPLATE ?? "hello_world";
-  const lang = process.env.WHATSAPP_TEST_TEMPLATE_LANG ?? "en_US";
-  try {
-    const res = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messaging_product: "whatsapp", to: toE164.replace(/^\+/, ""), type: "template", template: { name: template, language: { code: lang } } }),
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      console.error(`[whatsapp] test failed HTTP ${res.status}: ${body.slice(0, 300)}`);
-      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
-    }
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
-  }
+export async function sendTestWhatsapp(toE164: string, provider: WhatsAppProvider = whatsappProvider()): Promise<{ ok: boolean; error?: string }> {
+  if (provider.name === "console") return { ok: false, error: "not_configured" };
+  const r = await provider.sendTemplate({
+    toE164,
+    template: process.env.WHATSAPP_TEST_TEMPLATE ?? "hello_world",
+    params: [],
+    language: process.env.WHATSAPP_TEST_TEMPLATE_LANG ?? "en_US",
+  });
+  return { ok: r.delivered, error: r.error };
 }
 
 export interface CrewPingMessage {
@@ -39,42 +29,10 @@ export interface CrewPingMessage {
   minutes: number; // how long the pilot has to respond
 }
 
-/**
- * Sends a crew confirm-ping via the WhatsApp Cloud API using an approved template (WHATSAPP_TEMPLATE_CREW_PING,
- * default "crew_request_ping"). Template body params, in order: name, route, window, link, minutes.
- * Without WHATSAPP_TOKEN set it logs instead (local dev). Returns true only if WhatsApp accepted the message.
- * Never throws: the in-app ping already exists, so a WhatsApp failure must not break the dispatch.
- */
-export async function sendCrewPing(msg: CrewPingMessage): Promise<boolean> {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const template = process.env.WHATSAPP_TEMPLATE_CREW_PING ?? "crew_request_ping";
-
-  if (!token || !phoneNumberId) {
-    console.log(`[whatsapp:dry-run] crew ping to ${msg.toE164}: ${msg.route}, ${msg.window}, ${msg.minutes} min, ${msg.link}`);
-    return false;
-  }
-  try {
-    const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: msg.toE164.replace(/^\+/, ""),
-        type: "template",
-        template: {
-          name: template,
-          language: { code: process.env.WHATSAPP_TEMPLATE_LANG ?? "en" },
-          components: [{ type: "body", parameters: [msg.name, msg.route, msg.window, msg.link, String(msg.minutes)].map((text) => ({ type: "text", text })) }],
-        },
-      }),
-    });
-    if (!res.ok) console.error(`[whatsapp] crew ping failed: HTTP ${res.status}`);
-    return res.ok;
-  } catch (err) {
-    console.error("[whatsapp] crew ping failed:", err instanceof Error ? err.message : err);
-    return false;
-  }
+/** Crew confirm-ping. Returns true only if WhatsApp accepted the message. */
+export async function sendCrewPing(msg: CrewPingMessage, provider: WhatsAppProvider = whatsappProvider()): Promise<boolean> {
+  const r = await provider.sendTemplate({ toE164: msg.toE164, template: TEMPLATES.crewPing(), params: [msg.name, msg.route, msg.window, msg.link, String(msg.minutes)] });
+  return r.delivered;
 }
 
 export interface ExpiryReminder {
@@ -85,47 +43,21 @@ export interface ExpiryReminder {
   daysLeft: number;
 }
 
-/**
- * Sends an expiry reminder via the WhatsApp Cloud API using an approved template.
- * Without WHATSAPP_TOKEN set, logs to the console instead (local dev).
- * Template body params, in order: name, item, expiry date, days left.
- * Returns true only if WhatsApp accepted the message, so dry runs aren't recorded as sent.
- */
-export async function sendExpiryReminder(msg: ExpiryReminder): Promise<boolean> {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const template = process.env.WHATSAPP_TEMPLATE_EXPIRY ?? "credential_expiry_reminder";
+/** Expiry reminder. Returns true only if WhatsApp accepted it, so dry runs are never recorded as sent. */
+export async function sendExpiryReminder(msg: ExpiryReminder, provider: WhatsAppProvider = whatsappProvider()): Promise<boolean> {
+  const r = await provider.sendTemplate({ toE164: msg.toE164, template: TEMPLATES.expiry(), params: [msg.name, msg.item, msg.expiresOn, String(msg.daysLeft)] });
+  return r.delivered;
+}
 
-  if (!token || !phoneNumberId) {
-    console.log(`[whatsapp:dry-run] ${msg.toE164}: ${msg.item} expires ${msg.expiresOn} (${msg.daysLeft}d)`);
-    return false;
-  }
+export interface StateChangeMessage {
+  toE164: string;
+  name: string;
+  state: string; // "Verified", "Expiring", …
+  detail: string; // e.g. "Verified against SACAA records on 10 Nov 2026"
+}
 
-  const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to: msg.toE164.replace(/^\+/, ""),
-      type: "template",
-      template: {
-        name: template,
-        language: { code: process.env.WHATSAPP_TEMPLATE_LANG ?? "en" },
-        components: [
-          {
-            type: "body",
-            parameters: [msg.name, msg.item, msg.expiresOn, String(msg.daysLeft)].map((text) => ({
-              type: "text",
-              text,
-            })),
-          },
-        ],
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`WhatsApp send failed: HTTP ${res.status} ${await res.text()}`);
-  }
-  return true;
+/** Verification state change. Returns true only if WhatsApp accepted it. */
+export async function sendStateChange(msg: StateChangeMessage, provider: WhatsAppProvider = whatsappProvider()): Promise<boolean> {
+  const r = await provider.sendTemplate({ toE164: msg.toE164, template: TEMPLATES.stateChange(), params: [msg.name, msg.state, msg.detail] });
+  return r.delivered;
 }
