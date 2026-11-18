@@ -3,11 +3,13 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { createHeroTimeline } from "@/lib/animations";
+import { isCharterEnabled } from "@/lib/features";
 
 const RADAR = { x: 820, y: 350 };
 const RINGS = [110, 210, 310, 420];
 
 export function Hero() {
+  const charterOn = isCharterEnabled();
   const root = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -76,11 +78,11 @@ export function Hero() {
           </span>
         </h1>
         <p data-hero-fade className="mt-6 max-w-xl text-lg text-slate-tac">
-          Charter an aircraft across South Africa, or find SACAA-verified crew. One platform for passengers, operators and pilots.
+          {charterOn ? "Charter an aircraft across South Africa" : "Fly private for less on empty-leg seats across South Africa"}, or find SACAA-verified crew. One platform for passengers, operators and pilots.
         </p>
         <div data-hero-fade className="mt-9 flex flex-wrap gap-4">
-          <Link href="/charter" className="rounded-full bg-gold px-7 py-3.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light">
-            Request a charter quote
+          <Link href={charterOn ? "/charter" : "/empty-legs"} className="rounded-full bg-gold px-7 py-3.5 text-sm font-semibold text-obsidian transition hover:bg-gold-light">
+            {charterOn ? "Request a charter quote" : "Find empty-leg deals"}
           </Link>
           <Link href="/auth/signup" className="rounded-full border border-white/20 px-7 py-3.5 text-sm font-semibold text-ivory transition hover:border-gold/60">
             Join as operator or pilot

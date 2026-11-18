@@ -1,11 +1,33 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { MAX_TURN_CHARS, MAX_TURNS, PAGES, PAGE_KEYS, openPage, sanitizeHistory } from "../lib/assistant-core";
+import { afterEach, beforeEach, describe, it } from "node:test";
+import { MAX_TURN_CHARS, MAX_TURNS, PAGES, PAGE_KEYS, availablePageKeys, openPage, sanitizeHistory } from "../lib/assistant-core";
 import { requiredRole } from "../lib/roles";
 
 const TODAY = "2026-11-09";
 
-describe("assistant pages", () => {
+describe("charter switched off (the default)", () => {
+  beforeEach(() => delete process.env.NEXT_PUBLIC_CHARTER_ENABLED);
+
+  it("is not offered to the model", () => {
+    assert.ok(!availablePageKeys().includes("charter"));
+    assert.ok(availablePageKeys().includes("empty_legs"));
+  });
+
+  it("refuses to open it and points at empty legs", () => {
+    const r = openPage({ page: "charter", from: "FACT", to: "FALA" }, null, TODAY);
+    assert.equal(r.ok, false);
+    assert.match(!r.ok ? r.error : "", /aren't available.*empty_legs/);
+  });
+});
+
+describe("assistant pages (charter switched on)", () => {
+  beforeEach(() => (process.env.NEXT_PUBLIC_CHARTER_ENABLED = "1"));
+  afterEach(() => delete process.env.NEXT_PUBLIC_CHARTER_ENABLED);
+
+  it("offers charter again", () => {
+    assert.ok(availablePageKeys().includes("charter"));
+  });
+
   it("every page's declared role matches the real route guard (middleware)", () => {
     for (const key of PAGE_KEYS) {
       assert.equal(PAGES[key].role, requiredRole(PAGES[key].path), `${key} (${PAGES[key].path})`);

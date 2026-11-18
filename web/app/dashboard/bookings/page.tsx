@@ -4,6 +4,7 @@ import { aircraftClass } from "@/lib/charter";
 import { db } from "@/lib/db";
 import { formatWindow, formatZar } from "@/lib/empty-legs-shared";
 import { requireRole } from "@/lib/session";
+import { isCharterEnabled } from "@/lib/features";
 import { ghostBtn, primaryBtn } from "@/components/ui/Field";
 
 export const metadata: Metadata = { title: "My bookings — Lumiritin" };
@@ -35,10 +36,11 @@ export default async function BookingsPage() {
       <p className="text-xs uppercase tracking-[0.35em] text-gold">Passenger dashboard</p>
       <h1 className="mt-3 font-display text-5xl text-ivory">Welcome, {user.firstName}</h1>
 
+      {(isCharterEnabled() || charters.length > 0) && (
       <section className="mt-12">
         <div className="mb-4 flex items-end justify-between">
           <h2 className="font-display text-3xl text-ivory">Charter requests</h2>
-          <Link href="/charter" className={primaryBtn}>New charter</Link>
+          {isCharterEnabled() && <Link href="/charter" className={primaryBtn}>New charter</Link>}
         </div>
         {charters.length === 0 ? (
           <p className="glass rounded-3xl p-6 text-slate-tac">No charter requests yet.</p>
@@ -63,6 +65,7 @@ export default async function BookingsPage() {
           </ul>
         )}
       </section>
+      )}
 
       <section className="mt-12">
         <div className="mb-4 flex items-end justify-between">

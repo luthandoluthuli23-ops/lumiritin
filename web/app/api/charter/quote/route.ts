@@ -8,6 +8,7 @@ import { ICAO_RE } from "@/lib/airfields";
 import { MAX_MULTI_LEGS, aircraftClass, computeQuote, legDistanceNm } from "@/lib/charter";
 import { toE164 } from "@/lib/phone";
 import { clientIp, isRateLimited } from "@/lib/rate-limit";
+import { isCharterEnabled } from "@/lib/features";
 import { getSession } from "@/lib/session";
 import { sastDate } from "@/lib/empty-legs-shared";
 
@@ -52,6 +53,8 @@ function newReference(): string {
 
 /** POST /api/charter/quote — validates a trip, computes the estimate server-side and saves a CharterBooking. */
 export async function POST(req: NextRequest) {
+  // Charter is switched off: refuse requests so nothing can be submitted through an old page or a direct call.
+  if (!isCharterEnabled()) return NextResponse.json({ error: "not_available" }, { status: 404 });
   // 10 requests per 10 minutes per IP in production; relaxed in development so automated tests can run.
   const max = process.env.NODE_ENV === "production" ? 10 : 500;
   if (isRateLimited(`quote:${clientIp(req)}`, max, 10 * 60_000)) return fail(429, "rate_limited");

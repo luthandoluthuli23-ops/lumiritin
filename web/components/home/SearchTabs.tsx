@@ -5,21 +5,23 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { AIRFIELDS } from "@/lib/airfields";
 import { EASE_LUXE } from "@/lib/animations";
+import { isCharterEnabled } from "@/lib/features";
 import type { ReputationTier } from "@/lib/insights";
 import { ReputationRing, TierBadge } from "@/components/insights/Reputation";
 
-const TABS = [
-  { id: "charter", label: "Custom Charter Quote" },
+type TabId = "charter" | "empty" | "pilot";
+// While charter is switched off the first tab searches empty legs instead (see lib/features.ts).
+const TABS: { id: TabId; label: string }[] = [
+  isCharterEnabled() ? { id: "charter", label: "Custom Charter Quote" } : { id: "empty", label: "Empty Leg Deals" },
   { id: "pilot", label: "Pilot Credential Lookup" },
-] as const;
-type TabId = (typeof TABS)[number]["id"];
+];
 
 const inputCls =
   "mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-ivory outline-none transition placeholder:text-slate-tac/60 focus:border-gold/60 focus:bg-white/10";
 const submitCls = "self-end rounded-xl bg-gold px-7 py-3 text-sm font-semibold text-obsidian transition hover:bg-gold-light disabled:opacity-60";
 
 export function SearchTabs() {
-  const [tab, setTab] = useState<TabId>("charter");
+  const [tab, setTab] = useState<TabId>(TABS[0].id);
 
   return (
     <div className="glass mx-auto w-full max-w-5xl rounded-3xl p-3 shadow-gold sm:p-4">
@@ -55,6 +57,7 @@ export function SearchTabs() {
             transition={{ duration: 0.25 }}
           >
             {tab === "charter" && <RouteForm mode="charter" />}
+            {tab === "empty" && <RouteForm mode="empty" />}
             {tab === "pilot" && <PilotLookup />}
           </motion.div>
         </AnimatePresence>

@@ -8,6 +8,7 @@ beforeEach(() => {
   delete process.env.APP_BASE_URL;
   delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
   delete process.env.RESEND_API_KEY;
+  delete process.env.NEXT_PUBLIC_CHARTER_ENABLED;
 });
 afterEach(() => {
   process.env = { ...saved };
@@ -41,8 +42,14 @@ describe("welcome email", () => {
     assert.match(pilot.html, /logbook/i);
     assert.match(op.html, /href="https:\/\/lumiritin\.vercel\.app\/operator\/dashboard"/);
     assert.match(op.html, /fleet/i);
-    assert.match(pax.html, /href="https:\/\/lumiritin\.vercel\.app\/charter"/);
+    // Charter is switched off by default: passengers are sent to empty legs and charter isn't mentioned.
+    assert.match(pax.html, /href="https:\/\/lumiritin\.vercel\.app\/empty-legs"/);
     assert.match(pax.html, /empty legs/i);
+    assert.ok(!/\/charter|request a charter/i.test(pax.html + pax.text), "no charter while it is switched off");
+    process.env.NEXT_PUBLIC_CHARTER_ENABLED = "1";
+    const paxCharter = buildWelcomeEmail({ firstName: "Thandi", role: "PASSENGER" });
+    assert.match(paxCharter.html, /href="https:\/\/lumiritin\.vercel\.app\/charter"/);
+    assert.match(paxCharter.html, /Request a charter/);
     for (const e of [pilot, op, pax]) {
       assert.equal(e.subject, "Welcome to Lumiritin");
       assert.match(e.html, /Welcome aboard, Thandi\./);
