@@ -9,6 +9,7 @@ import { NearestAirfieldPicker } from "@/components/charter/NearestAirfieldPicke
 import { AirfieldAutocomplete } from "@/components/charter/AirfieldAutocomplete";
 import { FormError, TextField, apiErrorMessage, ghostBtn, primaryBtn } from "@/components/ui/Field";
 import { PasswordField } from "@/components/ui/PasswordField";
+import { SIGNUP_CONSENT_TEXT, WHATSAPP_CONSENT_TEXT } from "@/lib/verification-consent";
 import { isCharterEnabled } from "@/lib/features";
 
 const ROLES: { id: Role; blurb: string; icon: string }[] = [
@@ -232,11 +233,11 @@ export function SignupFlow({ airfields, initialRole, next }: Props) {
                 <div className="space-y-3 sm:col-span-2">
                   <label className="flex items-start gap-3 text-sm text-slate-tac">
                     <input type="checkbox" name="consentVerification" required className="mt-1 accent-[#d4af37]" />
-                    <span>I consent to Lumiritin looking up my licence, ratings and medical on the SACAA portal, including nightly re-checks, to keep my wallet current (POPIA).</span>
+                    <span>{SIGNUP_CONSENT_TEXT}</span>
                   </label>
                   <label className="flex items-start gap-3 text-sm text-slate-tac">
                     <input type="checkbox" checked={consentWhatsapp} onChange={(e) => setConsentWhatsapp(e.target.checked)} className="mt-1 accent-[#d4af37]" />
-                    <span>I consent to WhatsApp messages about expiring credentials. {whatsapp ? "Required to receive reminders." : "Only needed if you add a number."}</span>
+                    <span>{WHATSAPP_CONSENT_TEXT} {whatsapp ? "Required to receive reminders." : "Only needed if you add a number."}</span>
                   </label>
                 </div>
               </>

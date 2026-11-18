@@ -39,13 +39,14 @@ const LINKS: Record<Role, NavLink[]> = {
     { href: "/wallet", label: "Credential wallet" },
     { href: "/wallet/insights", label: "My reputation" },
     { href: "/wallet/logbook", label: "Logbook" },
+    { href: "/wallet/settings", label: "Settings" },
   ],
 };
 
 const CTA: Record<Role, NavLink> = {
   PASSENGER: { href: "/dashboard/bookings", label: "My bookings" },
   OPERATOR: { href: "/operator/crewing/new", label: "Post crew request" },
-  PILOT: { href: "/wallet", label: "Check credentials" },
+  PILOT: { href: "/wallet/verify", label: "Get verified" },
 };
 
 interface Props {

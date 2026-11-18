@@ -16,7 +16,8 @@
     "job:verify": "tsx --env-file=../.env jobs/nightly-verify.ts",
     "job:reminders": "tsx --env-file=../.env jobs/expiry-reminders.ts",
     "job:cascade": "tsx --env-file=../.env jobs/cascade-tick.ts",
-    "job:calendar": "tsx --env-file=../.env jobs/calendar-sync.ts"
+    "job:calendar": "tsx --env-file=../.env jobs/calendar-sync.ts",
+    "job:retention": "tsx --env-file=../.env jobs/document-retention.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

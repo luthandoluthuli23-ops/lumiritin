@@ -228,6 +228,7 @@ model Person {
   pings         CrewPing[]
   checkRecords  CheckRecord[]
   connections   ExternalConnection[]
+  submissions   VerificationSubmission[]
 
   @@map("person")
 }
@@ -450,6 +451,8 @@ model Consent {
   personId    String
   scope       String // "sacaa_verification" | "whatsapp_notifications"
   textVersion String // version of the consent wording shown
+  /// The exact consent wording the person agreed to (stored with every grant, so the version can't drift).
+  text        String?
   grantedAt   DateTime  @default(now())
   revokedAt   DateTime?
 
@@ -457,6 +460,75 @@ model Consent {
 
   @@index([personId, scope])
   @@map("consent")
+}
+
+// ─── Pilot-triggered verification (Task 4) ──────────────────────────────────
+
+enum SubmissionStatus {
+  PENDING // waiting for a reviewer
+  DECIDED // a reviewer set the result
+  WITHDRAWN // the pilot withdrew consent before a decision (documents deleted at once)
+}
+
+enum ReviewDecision {
+  VERIFIED // everything matched the documents → PASS
+  MISMATCH // details don't match the documents → MISMATCH
+  UNREADABLE // couldn't be checked (blurry, wrong document) → FAILED, never a pass
+}
+
+enum DocumentKind {
+  LICENCE
+  MEDICAL
+}
+
+// A pilot's request to be verified: consent, the details they entered, and their document photos for a reviewer.
+model VerificationSubmission {
+  id                String           @id @default(cuid())
+  personId          String
+  consentId         String?
+  createdAt         DateTime         @default(now())
+  status            SubmissionStatus @default(PENDING)
+  // What the pilot entered
+  holderName        String
+  licenceNumber     String
+  licenceType       String?
+  licenceExpiresAt  DateTime?        @db.Date
+  medicalClass      Int?
+  medicalExpiresAt  DateTime?        @db.Date
+  ratings           String[]         @default([])
+  /// What Lumi read from the licence photo, shown to the reviewer as a hint. Never decides anything.
+  lumiPrefill       Json?
+  // The reviewer's decision
+  decision          ReviewDecision?
+  decidedAt         DateTime?
+  reviewer          String?
+  reviewerNote      String?
+  /// When the document images were deleted (90 days after the decision, or at once on withdrawal).
+  documentsPurgedAt DateTime?
+
+  person    Person                 @relation(fields: [personId], references: [id], onDelete: Cascade)
+  documents VerificationDocument[]
+
+  @@index([status, createdAt])
+  @@index([personId, createdAt])
+  @@map("verification_submission")
+}
+
+// An uploaded licence/medical image, AES-256-GCM encrypted at rest (lib/documents.ts). Only reviewers can open it.
+model VerificationDocument {
+  id           String       @id @default(cuid())
+  submissionId String
+  kind         DocumentKind
+  mediaType    String
+  sizeBytes    Int
+  sha256       String // of the plaintext, for integrity
+  ciphertext   Bytes
+  createdAt    DateTime     @default(now())
+
+  submission VerificationSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("verification_document")
 }
 
 // One row per reminder sent; the unique key stops duplicates and resets on renewal

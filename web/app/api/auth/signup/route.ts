@@ -10,8 +10,7 @@ import { clientIp, isRateLimited } from "@/lib/rate-limit";
 import { ROLE_HOME } from "@/lib/roles";
 import { startSession } from "@/lib/session";
 
-/** Version of the POPIA consent wording shown on the sign-up form. Bump when the wording changes. */
-const CONSENT_TEXT_VERSION = "signup-v1";
+import { SIGNUP_CONSENT_TEXT, SIGNUP_CONSENT_VERSION, WHATSAPP_CONSENT_TEXT } from "@/lib/verification-consent";
 
 const text = (min: number, max: number) => z.string().trim().min(min).max(max);
 const icao = z.string().trim().toUpperCase().pipe(z.string().regex(ICAO_RE, "must be a 4-letter ICAO code"));
@@ -119,8 +118,8 @@ export async function POST(req: NextRequest) {
               role: input.crewRole,
               consents: {
                 create: [
-                  { scope: "sacaa_verification", textVersion: CONSENT_TEXT_VERSION },
-                  ...(input.whatsapp && input.consentWhatsapp ? [{ scope: "whatsapp_notifications", textVersion: CONSENT_TEXT_VERSION }] : []),
+                  { scope: "sacaa_verification", textVersion: SIGNUP_CONSENT_VERSION, text: SIGNUP_CONSENT_TEXT },
+                  ...(input.whatsapp && input.consentWhatsapp ? [{ scope: "whatsapp_notifications", textVersion: SIGNUP_CONSENT_VERSION, text: WHATSAPP_CONSENT_TEXT }] : []),
                 ],
               },
               credentials: {

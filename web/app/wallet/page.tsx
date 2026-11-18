@@ -4,7 +4,6 @@ import { AvailabilityPanel } from "@/components/pilot/AvailabilityPanel";
 import { CalendarSync } from "@/components/pilot/CalendarSync";
 import { CheckRecordsPanel } from "@/components/pilot/CheckRecordsPanel";
 import { CompetenciesPanel } from "@/components/pilot/CompetenciesPanel";
-import { LumiVerifyPanel } from "@/components/pilot/LumiVerifyPanel";
 import { RosterAndPings } from "@/components/pilot/RosterAndPings";
 import { formatDate, formatDateTime } from "@/components/pilot/format";
 import { h1 } from "@/components/pilot/logbook-shared";
@@ -16,7 +15,6 @@ import { currentState, describeState } from "@/lib/availability";
 import { checkStatus } from "@/lib/checks";
 import { db } from "@/lib/db";
 import { formatWindow } from "@/lib/empty-legs-shared";
-import { isLumiConfigured } from "@/lib/lumi";
 import { rollUp, syncPlatformFlights } from "@/lib/logbook";
 import { requireRole } from "@/lib/session";
 import { stateOf } from "@/lib/verification-checks";
@@ -106,6 +104,10 @@ export default async function WalletPage() {
           <p className="mt-4 text-sm text-slate-tac">
             Share your public check page with an operator: it shows only your name, licence type, state and last-verified date.
           </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/wallet/verify" className={ghostBtnSm}>{profileState === "VERIFIED" || profileState === "EXPIRING" ? "Re-check my documents" : "Verify my licence"}</Link>
+            <Link href="/wallet/settings" className="inline-flex items-center text-sm text-slate-tac underline underline-offset-4 hover:text-ivory pointer-coarse:min-h-11">Consent settings</Link>
+          </div>
           <p className="mt-2 break-all font-mono text-sm text-ivory">
             <Link href={`/verify/${person.publicCode}`} className="underline decoration-gold/40 underline-offset-4 hover:text-gold-light">
               /verify/{person.publicCode}
@@ -156,9 +158,6 @@ export default async function WalletPage() {
                 <dd className="mt-1 text-ivory">{c.lastVerifiedAt ? formatDateTime(c.lastVerifiedAt) : "never"}</dd>
               </div>
             </dl>
-            {isLumiConfigured() && (c.type === "PILOT_LICENCE" || c.type === "CABIN_CREW_CERT") && (
-              <LumiVerifyPanel label={c.type === "CABIN_CREW_CERT" ? "your SACAA cabin crew licence" : "your SACAA licence"} />
-            )}
             {c.ratings.length > 0 && (
               <div className="mt-5 overflow-x-auto rounded-2xl border border-white/10">
                 <table className="w-full text-left text-sm">

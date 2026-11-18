@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["dub1"],
-  "crons": [{ "path": "/api/cron/expiry-reminders", "schedule": "0 6 * * *" }]
+  "crons": [
+    { "path": "/api/cron/expiry-reminders", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/document-retention", "schedule": "30 1 * * *" }
+  ]
 }
