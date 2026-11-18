@@ -1,3 +1,4 @@
+import { parseDuration } from "@/lib/logbook-csv";
 import type { ReactNode } from "react";
 import { labelSmCls } from "@/components/ui/Field";
 
@@ -31,7 +32,18 @@ export interface LogbookEntryDTO {
 /** One decimal, South African formatting ("4 250,5"). */
 export const h1 = (x: number) => x.toLocaleString("en-ZA", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-export const numOrUndef = (v: string) => (v.trim() === "" ? undefined : Number(v));
+/** Exact hours for one flight (1.25 stays 1.25, 1.3333 stays 1.3333): a logbook shows what is recorded. Totals use h1. */
+export const hx = (x: number) => x.toLocaleString("en-ZA", { minimumFractionDigits: 1, maximumFractionDigits: 4 });
+
+/**
+ * An hours box: accepts 1.5, 1,5, 1:30 or 1h30 (the same reader as the CSV import). Empty → undefined; anything it can't
+ * read exactly → NaN, which validation rejects with a message (never silently turned into a number).
+ */
+export const numOrUndef = (v: string): number | undefined => {
+  const d = parseDuration(v, true);
+  if ("error" in d) return Number.NaN;
+  return d.hours ?? undefined;
+};
 
 /** Today's calendar date in the pilot's own time zone as YYYY-MM-DD (toISOString would give the UTC date, a day off near midnight). */
 export function todayLocal(): string {

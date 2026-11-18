@@ -1,0 +1,15 @@
+ForeFlight Logbook Import,This row is required for importing into ForeFlight. Do not delete or modify.
+
+Aircraft Table,,,,,
+AircraftID,TypeCode,Year,Make,Model,Category
+ZS-HLA,R44,2008,Robinson,R44 Raven II,Rotorcraft
+ZS-TST,AS50,2015,Airbus,H125,Rotorcraft
+
+Flights Table,,,,,,,,,,,,
+Date,AircraftID,From,To,Route,TotalTime,PIC,SIC,Night,ActualInstrument,SimulatedInstrument,DayLandingsFullStop,NightLandingsFullStop,Hobbs Start,PilotComments
+2026-03-02,ZS-HLA,FALA,FAPM,,1.4,1.4,,0.0,,,2,0,1203.4,Ferry
+2026-03-05,ZS-HLA,FAPM,FALA,,1.25,1.25,,0.5,0.1,0.2,1,1,1204.8,"Return leg, gusty
+second line of the remark"
+2026-04-11,ZS-TST,FALA,FACT,FALA FAGG FACT,4.35,,4.35,1.1,0.3,,0,1,1206.1,"He said ""all good"""
+
+2026-04-12,ZS-TST,FACT,FALA,,4.4,,4.4,,,,1,0,1210.5,

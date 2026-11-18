@@ -21,8 +21,12 @@ export async function POST(req: NextRequest) {
   // ── Batch: { flights: [...] } — used by scan-to-fill after the pilot reviews the rows ──
   const batch = bulkSchema.safeParse(raw);
   if (batch.success) {
-    const flights = batch.data.flights.filter((d) => notFuture(d.date));
-    if (flights.length === 0) return NextResponse.json({ error: "validation_failed", message: "No valid flights to save." }, { status: 422 });
+    // Never drop a row silently: a future-dated row rejects the batch with its row number, so the pilot can fix it.
+    const future = batch.data.flights.map((d, i) => (notFuture(d.date) ? -1 : i)).filter((i) => i >= 0);
+    if (future.length) {
+      return NextResponse.json({ error: "validation_failed", issues: future.map((i) => ({ path: `flights.${i}.date`, message: `row ${i + 1}: the date is in the future` })) }, { status: 422 });
+    }
+    const flights = batch.data.flights;
     await db.flightLogEntry.createMany({
       data: flights.map((d) => ({ personId, source: "MANUAL" as const, verified: false, ...flightColumns(d) })),
     });

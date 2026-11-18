@@ -271,10 +271,13 @@ describe("flight mapping", () => {
     assert.deepEqual(l({ Landings: 1, NightLandings: 5 }), [1, 1]); // night can't exceed the total
     assert.deepEqual(l({ Landings: 0 }), [0, 0]);
   });
-  it("clamps categories to the flight total and never trusts negatives", () => {
+  it("keeps categories exactly as recorded (no clamping, no rounding) and never trusts negatives", () => {
     const n = normalizeFlight(flightRow(1, { TotalFlightTime: 1, PIC: 5, Nighttime: -2, IMC: 0.8, SimulatedIFR: 0.8 }));
     assert.ok(n.ok);
-    assert.deepEqual([n.flight.pic, n.flight.night, n.flight.instrument], [1, 0, 1]);
+    assert.deepEqual([n.flight.pic, n.flight.night, n.flight.instrument], [5, 0, 1.6]);
+    const p = normalizeFlight(flightRow(2, { TotalFlightTime: 1.33, PIC: 1.25, Nighttime: 0.0833 }));
+    assert.ok(p.ok);
+    assert.deepEqual([p.flight.total, p.flight.pic, p.flight.night], [1.33, 1.25, 0.0833], "no rounding to 0.1");
   });
   it("reports why a row was skipped", () => {
     const why = (raw: unknown) => { const n = normalizeFlight(raw); return n.ok ? "ok" : n.reason; };

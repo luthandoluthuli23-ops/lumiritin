@@ -313,12 +313,12 @@ model CheckRecord {
 model LogbookSummary {
   id               String    @id @default(cuid())
   personId         String    @unique
-  totalHours       Decimal   @db.Decimal(8, 1)
-  picHours         Decimal?  @db.Decimal(8, 1)
-  multiEngineHours Decimal?  @db.Decimal(8, 1)
-  turbineHours     Decimal?  @db.Decimal(8, 1)
-  instrumentHours  Decimal?  @db.Decimal(8, 1)
-  nightHours       Decimal?  @db.Decimal(8, 1)
+  totalHours       Decimal   @db.Decimal(10, 4)
+  picHours         Decimal?  @db.Decimal(10, 4)
+  multiEngineHours Decimal?  @db.Decimal(10, 4)
+  turbineHours     Decimal?  @db.Decimal(10, 4)
+  instrumentHours  Decimal?  @db.Decimal(10, 4)
+  nightHours       Decimal?  @db.Decimal(10, 4)
   lastFlightAt     DateTime? @db.Date
   asOf             DateTime  @db.Date
   uploadKey        String? // object-storage key for the uploaded summary
@@ -347,15 +347,15 @@ model FlightLogEntry {
   aircraftType     String? // ICAO designator or free text
   aircraftReg      String?
   operatorName     String? // who the flight was for (set for platform flights)
-  totalHours       Decimal         @db.Decimal(5, 1)
-  picHours         Decimal?        @db.Decimal(5, 1)
-  coPilotHours     Decimal?        @db.Decimal(5, 1) // co-pilot / SIC time (universal logbook column)
-  dualHours        Decimal?        @db.Decimal(5, 1) // dual received / P-u-t
-  instructorHours  Decimal?        @db.Decimal(5, 1) // time given as instructor (universal logbook column)
-  nightHours       Decimal?        @db.Decimal(5, 1)
-  instrumentHours  Decimal?        @db.Decimal(5, 1)
-  multiEngineHours Decimal?        @db.Decimal(5, 1)
-  turbineHours     Decimal?        @db.Decimal(5, 1)
+  totalHours       Decimal         @db.Decimal(9, 4)
+  picHours         Decimal?        @db.Decimal(9, 4)
+  coPilotHours     Decimal?        @db.Decimal(9, 4) // co-pilot / SIC time (universal logbook column)
+  dualHours        Decimal?        @db.Decimal(9, 4) // dual received / P-u-t
+  instructorHours  Decimal?        @db.Decimal(9, 4) // time given as instructor (universal logbook column)
+  nightHours       Decimal?        @db.Decimal(9, 4)
+  instrumentHours  Decimal?        @db.Decimal(9, 4)
+  multiEngineHours Decimal?        @db.Decimal(9, 4)
+  turbineHours     Decimal?        @db.Decimal(9, 4)
   dayLandings      Int             @default(0)
   nightLandings    Int             @default(0)
   certifier        String? // CFI / PIC signature & licence no. that certifies the entry

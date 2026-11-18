@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 
 // Vercel rejects request bodies above ~4.5 MB before our code runs (with a non-JSON error), so cap below that.
 const MAX_BYTES = 4 * 1024 * 1024;
-const round1 = (x: number) => Math.round(x * 10) / 10;
 
 /**
  * POST (multipart: `file`) — scan a logbook page/photo/PDF and READ its flights back as draft rows for the
@@ -47,7 +46,7 @@ export async function POST(req: NextRequest) {
     arrivalIcao: r.to ?? "",
     aircraftType: r.aircraftType ?? "",
     aircraftReg: r.aircraftReg ?? "",
-    totalHours: r.total != null ? round1(r.total) : null,
+    totalHours: r.total, // exactly as read; the pilot checks and corrects every cell before saving
     picHours: r.pic,
     coPilotHours: r.coPilot,
     dualHours: r.dual,
@@ -62,8 +61,11 @@ export async function POST(req: NextRequest) {
     remarks: r.remarks ?? "",
   }));
 
-  if (flights.length === 0) {
+  // A totals / brought-forward line Lumi saw on the page: shown to the pilot to cross-check the rows (and, on a
+  // brought-forward page, offered as their opening balance). Never applied automatically.
+  const pageTotal = result.broughtForwardTotal ?? null;
+  if (flights.length === 0 && pageTotal == null) {
     return NextResponse.json({ ok: false, message: "No flights were readable on that page. Try a clearer photo, or add the flight by hand." }, { status: 422 });
   }
-  return NextResponse.json({ ok: true, flights });
+  return NextResponse.json({ ok: true, flights, pageTotal });
 }

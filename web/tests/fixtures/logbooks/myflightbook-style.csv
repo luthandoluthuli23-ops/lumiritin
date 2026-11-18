@@ -1,0 +1,3 @@
+Date,Tail Number,Model,Route,Total Flight Time,PIC,SIC,CFI,Dual Received,Night,IMC,Simulated IFR,Landings,FS Day Landings,FS Night Landings,Comments
+2026-06-01,ZS-TST,H125,FALA FAPM,1.33,1.33,0,0,0,0.25,0.1,0.2,2,,,Test flight one
+2026-06-02,ZS-TST,H125,FAPM FAGG FACT,3.17,3.17,0,0,0,0,0,0,3,,1,Night arrival

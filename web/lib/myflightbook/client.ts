@@ -44,7 +44,7 @@ export interface MfbTokens {
   scope: string | null;
 }
 
-/** One MyFlightbook flight, normalised. Hours are decimal hours rounded to 0.1; absent values are 0. */
+/** One MyFlightbook flight, normalised. Hours are decimal hours exactly as MyFlightbook has them (to 0.0001 h); absent values are 0. */
 export interface MfbFlight {
   /** MyFlightbook FlightID, as a string. Stable across syncs: the dedupe key. */
   externalId: string;
@@ -260,7 +260,8 @@ export async function fetchAllFlights(
 // Mapping
 // ─────────────────────────────────────────────────────────────────────────────
 
-const round1 = (x: number) => Math.round(x * 10) / 10;
+// Hours are kept as MyFlightbook has them: only float noise is trimmed (to 0.0001 h). Never rounded to 0.1, never clamped.
+const round4 = (x: number) => Math.round(x * 10_000) / 10_000;
 const num = (v: unknown): number => {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   return Number.isFinite(n) ? n : 0;
@@ -306,11 +307,12 @@ export function normalizeFlight(raw: unknown): Normalized {
   if (!id || id === "0" || id === "-1") return { ok: false, reason: "no_id" };
   const date = parseMfbDate(r.Date);
   if (!date) return { ok: false, reason: "no_date" };
-  const total = round1(num(r.TotalFlightTime));
+  const total = round4(num(r.TotalFlightTime));
   if (total <= 0) return { ok: false, reason: "no_time" };
   if (total > MAX_FLIGHT_HOURS) return { ok: false, reason: "too_long" };
-  // A category can't exceed the flight's total time; clamp bad data instead of rejecting the whole flight.
-  const part = (v: unknown) => Math.min(round1(Math.max(0, num(v))), total);
+  // Categories are imported as recorded, even if one exceeds the total (the pilot's data, not ours to change).
+  // Negative values aren't real times, so they count as 0.
+  const part = (v: unknown) => round4(Math.max(0, num(v)));
   const l = landings(r);
   return {
     ok: true,
@@ -328,7 +330,7 @@ export function normalizeFlight(raw: unknown): Normalized {
       dual: part(r.Dual),
       instructor: part(r.CFI),
       night: part(r.Nighttime),
-      instrument: Math.min(round1(Math.max(0, num(r.IMC)) + Math.max(0, num(r.SimulatedIFR))), total),
+      instrument: round4(Math.max(0, num(r.IMC)) + Math.max(0, num(r.SimulatedIFR))),
     },
   };
 }

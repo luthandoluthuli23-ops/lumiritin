@@ -1,0 +1,15 @@
+Date,From,To,Reg,Total,PIC,Night,Landings,Night landings,Extra column A,Extra column B,Remarks
+2026-05-01,FALA,FAPM,ZS-HLA,1.3,1.3,,2,0,x,y,Normal flight
+
+,FAPM,FALA,ZS-HLA,1.1,1.1,,1,0,,,No date on this row
+2026-05-03,FAPM,FALA,ZS-HLA,,,,1,0,,,No total on this row
+2026-05-04,FAPM,FALA,ZS-HLA,abc,,,1,0,,,Garbage time
+2026-05-05,FAPM,FALA,ZS-HLA,25:00,,,1,0,,,Too long
+2027-12-31,FAPM,FALA,ZS-HLA,1.0,1.0,,1,0,,,In the future
+2026-02-30,FAPM,FALA,ZS-HLA,1.0,1.0,,1,0,,,Not a real date
+2026-05-06,FALA,FAPM,ZS-HLA,1.5,2.0,,3,1,,,PIC more than total
+2026-05-07,FALA,FAPM,ZS-HLA,1.0,1.0,,1,2,,,More night landings than landings
+2026-05-08,FALA,FAPM,ZS-HLA,0.9,0.9,,1,0,,,Total electrical failure drill
+2026-05-01,FALA,FAPM,ZS-HLA,1.3,1.3,,2,0,x,y,Normal flight
+,,,,,,,,,,,
+TOTALS,,,,9.2,8.3,,,,,,

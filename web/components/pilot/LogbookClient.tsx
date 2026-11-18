@@ -12,7 +12,7 @@ import { ImportPanel } from "./ImportPanel";
 import { MyFlightbookPanel } from "./MyFlightbookPanel";
 import { ScanToFillPanel } from "./ScanToFillPanel";
 import { formatDate } from "./format";
-import { h1, type LogbookEntryDTO } from "./logbook-shared";
+import { h1, hx, type LogbookEntryDTO } from "./logbook-shared";
 
 export type { LogbookEntryDTO } from "./logbook-shared";
 
@@ -78,7 +78,7 @@ export function LogbookClient({ entries, totals, provider, providerRef, broughtF
         </button>
         {lumiLive && (
           <button type="button" onClick={() => { setScanning((v) => !v); setAdding(false); setEditing(null); }} className={ghostBtn}>
-            {scanning ? "Close" : "Scan a page to fill in"}
+            {scanning ? "Close" : "Scan paper logbook"}
           </button>
         )}
       </div>
@@ -96,13 +96,17 @@ export function LogbookClient({ entries, totals, provider, providerRef, broughtF
 
       <MyFlightbookPanel live={myFlightbookLive} mfb={mfb} />
 
-      <ImportPanel provider={provider} providerRef={providerRef} lumiLive={lumiLive} onImported={() => router.refresh()} />
+      <ImportPanel provider={provider} providerRef={providerRef} onImported={() => router.refresh()} />
 
       {/* Entries */}
       <section aria-labelledby="flights-h" className="pt-4">
-        <h2 id="flights-h" className="mb-4 font-display text-3xl text-ivory">
-          Flights {totals.entryCount > 0 && <span className="text-slate-tac">({totals.entryCount})</span>}
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 id="flights-h" className="font-display text-3xl text-ivory">
+            Flights {totals.entryCount > 0 && <span className="text-slate-tac">({totals.entryCount})</span>}
+          </h2>
+          {/* The whole logbook, every source plus the opening balance, any time. */}
+          <a href="/api/logbook/export" download className={ghostBtnSm}>Export logbook (CSV)</a>
+        </div>
         {entries.length === 0 ? (
           <EmptyState title="No flights yet">
             Fly a job through Lumiritin and it appears here automatically — or import your existing logbook or add a flight above.
@@ -147,7 +151,7 @@ function SourcePill({ e }: { e: LogbookEntryDTO }) {
 const route = (e: LogbookEntryDTO) => [e.departureIcao, e.arrivalIcao].filter(Boolean).join(" → ") || "—";
 const aircraft = (e: LogbookEntryDTO) => [e.aircraftType, e.aircraftReg].filter(Boolean).join(" · ") || "—";
 const landings = (e: LogbookEntryDTO) => e.dayLandings + e.nightLandings;
-const hrs = (v: number | null) => (v != null ? h1(v) : "—");
+const hrs = (v: number | null) => (v != null ? hx(v) : "—");
 
 // ─── Phones: one card per flight ─────────────────────────────────────────────
 
@@ -162,7 +166,7 @@ function FlightCard({ e, onEdit }: { e: LogbookEntryDTO; onEdit: () => void }) {
           {e.operatorName && <p className="break-words text-sm text-slate-tac">{e.operatorName}</p>}
         </div>
         <p className="shrink-0 text-right">
-          <span className="font-display text-3xl text-gold-gradient">{h1(e.totalHours)}</span>
+          <span className="font-display text-3xl text-gold-gradient">{hx(e.totalHours)}</span>
           <span className="block text-xs text-slate-tac">hrs</span>
         </p>
       </div>
@@ -191,8 +195,10 @@ function Meta({ label, value }: { label: string; value: string | number }) {
 // ─── Tablets and desktop: the full logbook table ─────────────────────────────
 
 function FlightTable({ entries, onEdit }: { entries: LogbookEntryDTO[]; onEdit: (e: LogbookEntryDTO) => void }) {
+  // `relative`: the sr-only "Actions" header is absolutely positioned; without a positioned scroll box it escaped the
+  // box and widened the whole page on screens narrower than the table.
   return (
-    <div className="hidden overflow-x-auto rounded-2xl border border-white/10 md:block">
+    <div className="relative hidden overflow-x-auto rounded-2xl border border-white/10 md:block">
       <table className="w-full min-w-[960px] text-left text-sm">
         <thead className="bg-white/5 text-xs uppercase tracking-wide text-slate-tac">
           <tr>
@@ -218,7 +224,7 @@ function FlightTable({ entries, onEdit }: { entries: LogbookEntryDTO[]; onEdit: 
               <td className="whitespace-nowrap px-3 py-2.5">{formatDate(e.date)}</td>
               <td className="whitespace-nowrap px-3 py-2.5">{route(e)}</td>
               <td className="px-3 py-2.5">{aircraft(e)}{e.operatorName ? <span className="block text-xs text-slate-tac">{e.operatorName}</span> : null}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{h1(e.totalHours)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{hx(e.totalHours)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums text-slate-tac">{hrs(e.picHours)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums text-slate-tac">{hrs(e.coPilotHours)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums text-slate-tac">{hrs(e.dualHours)}</td>
