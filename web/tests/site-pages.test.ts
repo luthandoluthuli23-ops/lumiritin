@@ -34,9 +34,9 @@ describe("about, contact and footer (Task 2)", () => {
   it("unset contact details and company facts are clearly marked placeholders, never invented values", () => {
     for (const v of Object.values(COMPANY)) assert.match(v, /^\[[A-Z_]+\]$/);
     if (!process.env.NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164) {
-      assert.equal(SITE_CONTACT.phoneDisplay, "[PHONE]");
-      assert.equal(SITE_CONTACT.whatsappUrl, null);
-      assert.equal(HELP_FALLBACK, "WhatsApp [PHONE] for help.");
+      assert.equal(SITE_CONTACT.phoneDisplay, "082 839 9906");
+      assert.equal(SITE_CONTACT.whatsappUrl, "https://wa.me/27828399906");
+      assert.equal(HELP_FALLBACK, "WhatsApp 082 839 9906 for help.");
     }
     if (!process.env.NEXT_PUBLIC_CONTACT_EMAIL) {
       assert.equal(SITE_CONTACT.email, "hello@lumiritin.co.za");
