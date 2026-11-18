@@ -1,19 +1,23 @@
+**Status: pre-launch. Verification results are for testing and must not be relied on for operational decisions.**
+
 # Lumiritin
 
-Private aviation for South Africa. One platform for three kinds of user:
+The free wallet for South African pilots: licence, medical and logbook in one place, with WhatsApp warnings before
+anything expires. Pilots are the first customers.
 
 | Who | What they get |
 |---|---|
-| **Passengers** | Custom charter requests with an instant ZAR estimate, and an empty-leg marketplace (repositioning flights sold per seat at up to 75% off). |
-| **Operators** | Fleet management, empty-leg publishing, a crew dispatcher with transparent pilot matching, and a "bench" dashboard for lending idle crew to other operators. |
-| **Pilots** | A SACAA credential wallet (licence, ratings, medical, logbook) with expiry reminders, availability management, external calendar sync, and one-tap responses to crew requests. |
+| **Pilots** (the focus) | A credential wallet (licence, ratings, medical) checked against SACAA records by a reviewer, 60/30/7-day expiry reminders, a logbook (manual entry, CSV import with preview, paper-logbook scanning with row-by-row correction, MyFlightbook connection, full CSV export), availability, calendar sync and one-tap responses to crew requests. Free. |
+| **Operators** | Fleet, crew dispatcher with transparent matching (only verified crew are returned), bench. In the code, not promoted on the homepage. |
+| **Passengers** | Custom charter (behind `CHARTER_PUBLIC`, off by default) and empty legs. In the code, not promoted on the homepage. |
 
-> **Status: development / pre-launch.** Several things are deliberately placeholders or not yet connected to the real world. See [Known gaps](#known-gaps) before relying on any number, claim or verification result you see in the UI.
+Lumiritin is a booking and credentialing platform, not an air operator. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) before
+relying on anything you see in the UI, and [SECURITY.md](SECURITY.md) to report a vulnerability.
 
 ## Tech stack
 
 - **Web:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, Framer Motion, GSAP
-- **Data:** PostgreSQL 16 via Prisma
+- **Data:** PostgreSQL 16 via Prisma (hosted on Supabase; migrations are idempotent SQL applied by hand)
 - **Auth:** signed-cookie sessions (JWT, HS256) with scrypt password hashing; role-based route guards in middleware
 - **Verifier:** Python (`requests` + BeautifulSoup) SACAA lookup, run as a CLI by the TypeScript jobs
 - **Validation:** Zod on every API route
@@ -24,6 +28,9 @@ Private aviation for South Africa. One platform for three kinds of user:
 lumiritin/
 ├── docker-compose.yml          Postgres 16 for local development
 ├── .env.example                every environment variable, documented
+├── KNOWN_ISSUES.md             what isn't finished or can't be trusted yet
+├── SECURITY.md                 how to report a vulnerability
+├── THIRD_PARTY_NOTICES.md      MyFlightbook and other third parties
 ├── verifier/                   Python: SACAA lookup + parser (pure, no database access)
 │   ├── src/lumiritin_verifier/ client (rate limiting, block detection), parser, models, CLI
 │   └── tests/                  pytest suite (synthetic fixture, not a real SACAA page)
@@ -31,36 +38,41 @@ lumiritin/
     ├── middleware.ts           route guards: /operator/* /wallet/* /dashboard/*
     ├── prisma/                 schema, migrations, seed
     ├── app/
-    │   ├── page.tsx            landing (GSAP hero, tabbed search, live counters)
-    │   ├── empty-legs/         marketplace with live filtering and booking drawer
-    │   ├── charter/            trip configurator + aircraft classes + instant estimate
-    │   ├── auth/               role-aware sign-up and sign-in
-    │   ├── dashboard/          passenger area
-    │   ├── operator/           dashboard, fleet, empty-leg wizard, crewing, bench
-    │   ├── wallet/             pilot credential wallet, availability, calendar sync
-    │   ├── crew/respond/       public one-tap accept/decline page for crew pings
+    │   ├── page.tsx            pilot-first homepage
+    │   ├── verification/       how verification works (states, what's compared)
+    │   ├── verify/[code]/      public check page: name, licence type, state, last verified date only
+    │   ├── about/ privacy/ terms/  company details and legal drafts (placeholders)
+    │   ├── wallet/             credential wallet, verify, settings (consent), logbook, insights
+    │   ├── admin/review/       verification review queue (REVIEWER_EMAILS only)
+    │   ├── charter/            charter configurator (CHARTER_PUBLIC)
+    │   ├── empty-legs/ dashboard/ operator/ crew/respond/   passenger, operator and crew-ping pages
     │   └── api/                route handlers (see below)
-    ├── components/             UI by area (layout, home, charter, operator, pilot, auth, ui)
+    ├── components/             UI by area (layout, home, pilot, admin, charter, operator, auth, ui)
     ├── lib/                    pure engines and server helpers (see below)
-    └── jobs/                   scheduled scripts (verification, reminders, cascade, calendar)
+    ├── jobs/                   scheduled scripts (verification, reminders, retention, cascade, calendar)
+    └── tests/                  node:test suites + fixtures
 ```
 
 ### Core modules (`web/lib/`)
 
 | File | Purpose |
 |---|---|
-| `geo.ts` | Haversine distance, nearest-airfield ranking (pure) |
-| `charter.ts` | Aircraft classes and the indicative price estimate (pure; re-run server-side so the client can't set a price) |
-| `availability.ts` | Pilot state machine: `AVAILABLE` / `BOOKED` / `OFF`, auto-expiry (pure) |
-| `matching.ts` | Deterministic pilot matching: hard gates plus a score out of 100 with a full breakdown (pure, no model) |
-| `cascade.ts` | Dispatch: ping top 3, 10-minute window, cascade to the next candidate, acceptance with row locking |
+| `verification-state.ts` | The five profile states, never-a-pass rules, field comparison, badge text (pure) |
+| `verification-checks.ts` | Records checks in the append-only audit log and reads a profile's state |
+| `pilot-verification.ts` | Consent + document submission, reviewer decisions, consent withdrawal, 90-day document purge |
+| `documents.ts` | AES-256-GCM encryption of uploaded documents (`DOCUMENT_ENCRYPTION_KEY`) |
+| `sacaa-otp-relay.ts` | OTP-relay path behind `SACAA_OTP_RELAY=false` (not implemented; needs a legal review first) |
+| `reminders.ts`, `state-notifications.ts`, `messaging.ts`, `whatsapp.ts` | 60/30/7-day reminders, state-change messages, WhatsApp provider interface |
+| `logbook-csv.ts`, `logbook-import.ts`, `logbook-export.ts` | Logbook CSV parsing (pure), what an import saves, full export |
+| `matching.ts`, `cascade.ts` | Deterministic crew matching (only VERIFIED/EXPIRING profiles) and the dispatch cascade |
+| `availability.ts`, `geo.ts`, `charter.ts`, `bench.ts` | Availability state, distances, charter estimate, bench policy (**placeholder numbers**) |
 | `ical.ts`, `safe-fetch.ts`, `calendar-sync.ts` | iCal import with an SSRF guard for user-supplied URLs |
-| `bench.ts` | Bench-earning policy (**placeholder numbers**) |
-| `session*.ts`, `roles.ts`, `password.ts`, `rate-limit.ts` | Auth building blocks |
+| `features.ts`, `site-contact.ts` | Feature switches (`CHARTER_PUBLIC`) and public contact details / placeholders |
+| `session*.ts`, `roles.ts`, `reviewers.ts`, `password.ts`, `rate-limit.ts` | Auth building blocks |
 
 ### API routes (`web/app/api/`)
 
-`auth/{signup,signin,signout,demo}` · `charter/quote` · `empty-legs` (+ `[id]/bookings`) · `aircraft` · `crew-requests` (+ `[id]/{shortlist,dispatch,status}`) · `crew-pings/[token]` · `operator/roster` (+ `[id]`, `[id]/book`) · `pilot/{availability,calendar-sync,roster}` · `logbook/{entries,import,scan}` · `logbook/connect/[provider]` (+ `callback`, `sync`) · `lumi/*` · `verify`
+`auth/{signup,signin,signout,demo}` · `pilot/verification` (+ `otp`) · `pilot/consent` · `admin/review/[id]` · `admin/documents/[id]` · `logbook/{entries,import,scan,export,opening-balance}` · `logbook/connect/[provider]` (+ `callback`, `sync`) · `charter/quote` · `empty-legs` · `aircraft` · `crew-requests` · `crew-pings/[token]` · `operator/*` · `pilot/{availability,calendar-sync,roster,...}` · `lumi/try` · `assistant` · `cron/{expiry-reminders,document-retention}` · `health`
 
 ## Getting started
 
@@ -70,8 +82,9 @@ Prerequisites: Node.js 20+ (developed on 24), PostgreSQL 16 (or Docker), Python 
 # 1. environment
 cp .env.example .env
 cp .env.example web/.env
-# then edit BOTH files and set SESSION_SECRET (32+ chars):
+# then edit BOTH files and set SESSION_SECRET (32+ chars) and DOCUMENT_ENCRYPTION_KEY (32 bytes, base64):
 #   node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 # 2. database (skip if you already run PostgreSQL 16 with a lumiritin user/db)
 docker compose up -d
@@ -79,7 +92,7 @@ docker compose up -d
 # 3. web app
 cd web
 npm install
-npx prisma migrate dev          # applies all migrations
+npx prisma migrate dev          # LOCAL ONLY: applies all migrations to your local database
 npm run db:seed                 # airfields (real reference data) + a fictional demo dataset
 npm run dev                     # http://localhost:3000
 
@@ -97,110 +110,72 @@ python -m lumiritin_verifier --html tests/fixtures/sample_result.html   # offlin
 
 In development the navbar shows a **"Demo as" switcher** (Passenger / Operator / Pilot) that signs you in as a seeded demo user with no password. It is hard-disabled when `NODE_ENV=production`.
 
-- **Operator → Crewing:** choose Cessna Citation Sovereign (C680), FAPM, a date two or more days out. You get a ranked top-3 shortlist with a score breakdown. *Dispatch* sends 10-minute confirm-pings.
-- **Pilot → Wallet:** set availability (it always expires), connect a calendar, accept roster invitations.
-- **Operator → Bench:** roster, shared-pool toggle, mark-busy control, accrued earnings.
-- With no `WHATSAPP_TOKEN`, WhatsApp messages are logged to the console instead of sent. To act on a ping you need its token (in the `crew_ping` table): open `/crew/respond/<token>`.
+- **Pilot → Get verified:** consent, enter licence details, upload a licence and medical photo. Add your account's email to `REVIEWER_EMAILS` and open `/admin/review` from a *different* account to decide it (nobody can review their own).
+- **Pilot → Logbook:** import a CSV (preview first), scan paper logbook pages and correct each row, or export everything as CSV.
+- **Operator → Crewing:** only VERIFIED/EXPIRING crew are returned, so verify a demo pilot first.
+- With no `WHATSAPP_TOKEN`, WhatsApp messages are logged to the console instead of sent.
 
-`npm run db:seed` is idempotent and resets the demo operator's empty legs, crew requests and pilot availability. **Never run it against production**: everything except the airfields is fictional demo data.
+`npm run db:seed` is idempotent and resets demo data. **Never run it against production**: everything except the airfields is fictional demo data.
 
 ## How the key engines work
 
-**Availability.** A pilot's state for a time range is derived from stored windows. `BOOKED` if any booked window overlaps; `AVAILABLE` if an unexpired available window covers the whole range; otherwise `OFF`. "Available until Friday 18:00" is just a window ending then, so expiry needs no cleanup job. Windows can last at most 7 days. Sources: manual, automatic booking lock, operator dispatcher, imported iCal.
+**Verification.** Every pilot profile is in exactly one state: `VERIFIED`, `EXPIRING` (a credential within 60 days of expiry), `CHECK_OVERDUE` (last pass older than 30 days, the latest check failed, or something already expired), `MISMATCH` or `UNVERIFIED`. SACAA's licensing portal sends an OTP to the holder, so checks are pilot-triggered: the pilot consents (text, version and time stored), enters their details and uploads their licence and medical (encrypted at rest). A reviewer compares them field by field; "Verified" only counts when every field matched. Every check is appended to `verification_check`, which a database trigger makes append-only. A failed, timed-out or blocked lookup is recorded as FAILED and can never move a profile towards verified. Changing a name or licence number resets the profile to UNVERIFIED (database triggers). Lumi (AI) may pre-fill the reviewer's view but never decides. Document images are deleted 90 days after a decision; results and the audit log are kept.
 
-**Matching.** Hard gates (a pilot failing any is excluded, with reasons): pool access, availability for the whole job, exact type rating (SACAA-verified, valid through the job), licence valid and verified with no flags, Class 1 medical valid through the job, the pilot's own travel radius, minimum hours. Eligible pilots score out of 100: proximity 60 (under 50 km is full marks), experience 25, verification freshness 15. Same inputs always give the same ranking. Tunables live at the top of `lib/matching.ts`.
+**Logbook import.** CSV imports are parsed (any common encoding, delimiter, date and duration format), previewed with exact totals and a reason for every skipped row, then confirmed. Hours are stored exactly (to 0.0001 h) and never rounded or clamped. Paper logbooks are scanned page by page; the pilot checks every row against the photo and corrects anything Lumi misread before saving. The whole logbook can be exported as CSV at any time.
 
-**Dispatch cascade.** The top 3 are pinged (WhatsApp if consented, plus in-app). Each ping lasts 10 minutes. First accept wins; the rest are cancelled. A decline or expiry pings the next-ranked pilot. Acceptance re-checks availability under a row lock, books the pilot for the job window, and accrues a bench earning for the lending operator if applicable. Nothing relies on an in-process timer; the cascade advances from status polling, pilot responses, and `npm run job:cascade`.
+**Matching.** Gate 0: only `VERIFIED` and `EXPIRING` profiles are ever returned. Then hard gates (with reasons): pool access, availability for the whole job, type rating valid through the job, licence and Class 1 medical valid through the job, travel radius, minimum hours. Eligible pilots score out of 100: proximity 60, experience 25, verification freshness 15. Same inputs always give the same ranking.
 
-**Reciprocal pool.** A pilot on another operator's roster is only reachable if that operator offers them to the pool *and* the requesting operator offers at least one of its own pilots. Pilots must accept a roster invitation before an operator can see or control their availability.
+**Dispatch cascade.** The top 3 are pinged (WhatsApp if consented, plus in-app) for 10 minutes each. First accept wins; a decline or expiry pings the next-ranked pilot. Acceptance re-checks availability under a row lock.
 
-**Site assistant ("Ask Lumi").** A floating chat on every page answers aviation questions and helps people use the site, and can take them to the right page with the form pre-filled (`/charter?from=FACT&to=FALA&date=...`). It runs on the smallest model tier (`LUMI_CHAT_MODEL`, default `claude-haiku-5-5`) using `ANTHROPIC_API_KEY`, and is hidden when that key is unset. It can only read (airfield lookup, open empty legs) and navigate to a fixed allowlist of pages (`lib/assistant-core.ts`, checked against the visitor's role); it never books, pays or submits anything. `POST /api/assistant` is same-origin only and rate limited (20 messages / 10 min and 150 / day per visitor, 600 / hour overall). Code: `lib/assistant.ts` (model loop + tools), `app/api/assistant/route.ts`, `components/assistant/AssistantWidget.tsx` (mounted in `app/layout.tsx`).
+**Reminders.** 60, 30 and 7 days before any licence, rating or medical expires, plus a message on every verification state change. Each message is claimed in the database before it is sent, so overlapping runs never send twice.
 
-**Logbook connection (MyFlightbook).** A pilot can pull their flights from MyFlightbook instead of uploading a file. `GET /api/logbook/connect/myflightbook` sends them to MyFlightbook's "Allow access" page; the callback swaps the one-time code for tokens (stored AES-256-GCM encrypted in `external_connection`, key derived from `SESSION_SECRET`) and imports. Flights are matched on MyFlightbook's `FlightID` (`flight_log_entry.externalSource` / `externalId`), so **Sync now** creates what is new, updates what changed and removes what the pilot deleted there, and never touches manual / CSV / Lumi / platform rows. An empty or failed fetch never deletes anything. Set `MYFLIGHTBOOK_CLIENT_ID` / `MYFLIGHTBOOK_CLIENT_SECRET` (see `.env.example`); the callback URL registered with MyFlightbook must be exactly `<APP_BASE_URL>/api/logbook/connect/myflightbook/callback`. Protocol code is in `lib/myflightbook/` (pure, unit-tested), the database sync in `lib/logbook-sync.ts`.
+**Site assistant ("Ask Lumi").** A floating chat on every page answers aviation questions and helps people use the site (`lib/assistant.ts`, `components/assistant/AssistantWidget.tsx`). It can only read and navigate to an allowlist of pages; it never books, pays or submits anything.
+
+**Logbook connection (MyFlightbook).** OAuth2 connection that pulls a pilot's flights, matched on MyFlightbook's `FlightID` so a re-sync updates rather than duplicates. Tokens are AES-256-GCM encrypted. No MyFlightbook code is included (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 
 ## Tests
 
-`cd web && npm test` runs the unit tests (Node's built-in runner via `tsx`, no extra dependencies): the MyFlightbook protocol client, mapping, encryption and OAuth-state checks.
+```bash
+cd web && npm test                 # node:test via tsx: unit tests + logbook fixtures
+cd verifier && pytest              # the Python parser
+```
+
+Database-level tests (append-only audit log, identity resets, the verification flow, reminder idempotency) run only
+when `TEST_DATABASE_URL` points at a **local throwaway** database with the migrations applied; otherwise they are
+skipped. There is no CI yet.
 
 ## Scheduled jobs
 
-Run from cron, Task Scheduler, or a GitHub Actions schedule, from `web/`:
+Run from cron, Task Scheduler, or a GitHub Actions schedule, from `web/` (on Vercel, the two cron routes in `vercel.json`):
 
 | Command | Suggested cadence | What it does |
 |---|---|---|
-| `npm run job:cascade` | every minute | expires overdue pings and pings the next candidate |
-| `npm run job:reminders` | daily ~08:00 SAST | 90/30/7-day WhatsApp expiry reminders |
-| `npm run job:verify` | nightly ~02:00 SAST | re-checks consented licences against SACAA (needs `SACAA_PORTAL_URL`) |
+| `npm run job:reminders` | daily ~08:00 SAST | 60/30/7-day expiry reminders + verification state-change messages |
+| `npm run job:retention` | daily | deletes verification document images 90 days after a decision |
+| `npm run job:cascade` | every minute | expires overdue crew pings and pings the next candidate |
+| `npm run job:verify` | nightly | re-checks consented licences against SACAA (needs a working portal; see KNOWN_ISSUES) |
 | `npm run job:calendar` | every 30 minutes | re-imports connected pilot calendars |
 
 ## Deploying to Vercel
 
-Deploy **only the `web/` app**. Do not import `verifier/` (Python) and do not use the "Services" preset: the Python verifier cannot run inside the Next.js functions, so it needs a separate runner (see below).
+Deploy **only the `web/` app** (Root Directory `web`).
 
-1. **Database.** Vercel does not host PostgreSQL. Create one on a managed provider (Neon, Supabase, Vercel's Marketplace Postgres, etc.) and copy its **pooled** connection string for the app.
-2. **Import** the repo in Vercel: choose the `web` project (Next.js), so *Root Directory* is `web`. The build command (`prisma generate && next build`) is already set in `package.json`.
-3. **Environment variables** (Project → Settings → Environment Variables):
-   - `DATABASE_URL`: the pooled connection string
-   - `SESSION_SECRET`: a **new** random 32+ character value (not the one from your local `.env`)
-   - `APP_BASE_URL`: your deployed URL, e.g. `https://lumiritin.vercel.app`
-   - `MYFLIGHTBOOK_CLIENT_ID`, `MYFLIGHTBOOK_CLIENT_SECRET` (logbook connection), `ANTHROPIC_API_KEY` (Lumi document reading), `CRON_SECRET` (expiry-reminder cron)
-   - optional: `NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164`, `WHATSAPP_*`, `SACAA_*`
-   - register `https://<your-domain>/api/logbook/connect/myflightbook/callback` as a callback for the MyFlightbook client
-4. **Create the schema and reference data once**, from your own machine, pointing at the production database (use the provider's *direct*, non-pooled URL for migrations). Migrations are plain idempotent SQL, so you can also paste them, in folder order, into the Supabase SQL editor. **Apply the database changes before deploying code that needs them.**
-   ```bash
-   cd web
-   DATABASE_URL="<direct url>" npx prisma migrate deploy
-   DATABASE_URL="<direct url>" npm run db:seed:airfields
-   ```
-   **Never run `npm run db:seed` against production.** It loads fictional demo data and deletes data; it refuses to run unless `DATABASE_URL` is local.
-5. **Deploy.** The demo role switcher is automatically disabled in production, so users sign up normally.
-
-What does not work on Vercel as-is:
-
-- **`/api/verify` and `npm run job:verify`** spawn the Python verifier, which is not part of the deployment. Run the verification job elsewhere (e.g. a scheduled GitHub Action) once the real SACAA portal is connected.
-- **Scheduled jobs.** Vercel Hobby cron runs at most once a day, but the crew-ping cascade needs to run every minute. Until a scheduler calls `npm run job:cascade`, the cascade only advances while an operator has the status page open or a pilot responds.
-- **Rate limiting** is in-memory per serverless instance, so it is only a soft limit on Vercel. Move it to a shared store (e.g. Redis) before launch.
-- Vercel's free Hobby plan is for personal, non-commercial use.
+1. **Database.** Use the provider's pooled connection string for `DATABASE_URL`.
+2. **Apply migrations by hand, before deploying code that needs them.** They are idempotent SQL in `web/prisma/migrations/`; paste them, in folder order, into the Supabase SQL editor (or `prisma db execute --file`). Never run `prisma migrate dev` against the hosted database.
+3. **Environment variables:** `DATABASE_URL`, `SESSION_SECRET`, `APP_BASE_URL`, `DOCUMENT_ENCRYPTION_KEY`, `REVIEWER_EMAILS`, `CRON_SECRET`, and as needed `ANTHROPIC_API_KEY`, `RESEND_API_KEY`/`EMAIL_FROM`, `WHATSAPP_*`, `MYFLIGHTBOOK_*`, `NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164`, `NEXT_PUBLIC_CONTACT_EMAIL`. Keep `CHARTER_PUBLIC=false` and `SACAA_OTP_RELAY=false`. See `.env.example`.
+4. **Never run `npm run db:seed` against production.** It loads fictional demo data and deletes data.
 
 ## Environment variables
 
-See [`.env.example`](.env.example) for the full, commented list. Required to run: `DATABASE_URL` and `SESSION_SECRET`. Everything else (SACAA portal, WhatsApp, concierge number, base URL) is optional locally.
+See [`.env.example`](.env.example) for the full, commented list. Required to run: `DATABASE_URL` and `SESSION_SECRET`; `DOCUMENT_ENCRYPTION_KEY` for document uploads.
 
 ## Security notes
 
 - Sessions are HTTP-only, `SameSite=Lax` cookies, `Secure` in production. Every protected route is checked in middleware **and** again in the page or handler.
-- Passwords use scrypt. Sign-in is rate-limited per IP and per account and does not reveal whether an email exists.
-- API handlers derive the operator or pilot from the session; request bodies are never trusted for identity.
-- The calendar importer fetches user-supplied URLs server-side. It allows only public HTTPS hosts, re-validates every redirect, and caps size and time. DNS rebinding remains a small residual risk (documented in `lib/safe-fetch.ts`).
-- Rate limiters are in-memory and per process; replace with a shared store when running more than one instance.
-- Crew-ping links are secret tokens that work only while the ping is pending.
-- **Do not commit `.env` files.** Only `.env.example` is tracked.
-
-## Known gaps
-
-These are real and affect what you can trust:
-
-- **SACAA verification has not run against the real portal.** The parser is tested on a synthetic fixture. Until it is connected, no pilot is genuinely "verified", and the matching engine (which requires verified ratings) only matches seeded demo pilots. The landing-page counters "100% SACAA-verified crew" and "< 2 hr dispatch" are placeholders, not measurements.
-- **Placeholder money.** Charter hourly rates (`lib/charter.ts`) and bench earnings (15% of an assumed R3,500/hr, `lib/bench.ts`) are invented. Earnings are accrued only; there is no payout or payment system.
-- **Operators are not verified.** AOC numbers and licence ownership are not validated at sign-up.
-- **No admin/approval flow**, no email sending, no password reset.
-- **WhatsApp** templates (`credential_expiry_reminder`, `crew_request_ping`) need Meta approval before real messages send.
-- **Airfields:** only seven are seeded (FAPM, FALA, FACT, FAOR, FADN, FAKN, FAPE). Add more rows to extend routes and charter quotes.
-- **Medical class rule** (Class 1 required) should be confirmed against current SACAA requirements.
-- **Tests:** the Python verifier has a pytest suite, and `web/` has unit tests for the logbook connection (`npm test`). The matching/cascade engines were verified with ad hoc scripts that are not committed, and there is no CI yet.
-- **MyFlightbook live check:** the connection was built from MyFlightbook's wiki and server source and tested end to end against a faithful fake. The token response field names, the wire format of `Date` and the exact meaning of `Landings` / `FullStopLandings` / `NightLandings` are not stated in their docs; confirm them on the first real flight (`MYFLIGHTBOOK_DEBUG=1`). MyFlightbook asks developers not to test against the live site; ask them for a staging server.
-- Recurring (RRULE) calendar events are not expanded; the UI tells the pilot when any were skipped.
-- Charter references (`LUM-2026-X981`) allow about 22,000 per year; the format needs a longer suffix at volume.
-
-## Before going live (checklist)
-
-- [ ] Real SACAA portal URL, a saved real results page, updated parser aliases (`verifier/src/lumiritin_verifier/parser.py`)
-- [ ] Confirm the portal's terms permit automated nightly checks; finalise POPIA consent wording (currently versioned `signup-v1`)
-- [ ] Replace placeholder rates and bench terms with commercial decisions
-- [ ] Operator verification flow; real CAPTCHA/abuse protection on public endpoints
-- [ ] Production `SESSION_SECRET`, HTTPS, a managed PostgreSQL, a shared rate-limit store
-- [ ] Schedule the four jobs; get WhatsApp templates approved
-- [ ] Add a license, a JS test suite and CI
+- Uploaded licence/medical images are AES-256-GCM encrypted with a dedicated key, only reviewers can open them, and they are deleted 90 days after a decision.
+- The verification audit log is append-only at the database level.
+- Passwords use scrypt. Sign-in is rate-limited and does not reveal whether an email exists. Rate limiters are in-memory per instance.
+- **Do not commit `.env` files.** Only `.env.example` is tracked. Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ## Licence
 

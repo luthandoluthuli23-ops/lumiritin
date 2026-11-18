@@ -201,7 +201,7 @@ export function SignupFlow({ airfields, initialRole, next }: Props) {
                   label={crewRole === "CABIN_CREW" ? "Cabin Crew Member Licence no." : "SACAA licence number"}
                   name="licenceNumber"
                   required
-                  placeholder={crewRole === "CABIN_CREW" ? "your CCML number" : "e.g. 0270999999"}
+                  placeholder={crewRole === "CABIN_CREW" ? "your CCML number" : "Your SACAA licence number"}
                 />
                 <TextField label="WhatsApp number" name="whatsapp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="082 123 4567" hint="For expiry reminders at 90, 30 and 7 days." />
                 <div className="sm:col-span-2">

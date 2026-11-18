@@ -44,7 +44,7 @@ async function seedDemoPilot() {
       },
       credentials: {
         create: {
-          licenceNumber: "0270999999",
+          licenceNumber: "DEMO-000001",
           licenceCategory: "ATPL(A)",
           portalStatus: "Valid (demo data)",
           issuedAt: new Date("2018-03-15"),
@@ -170,16 +170,16 @@ async function seedPilotPool(demoOperatorId: string, demoPilotId: string) {
     roster?: { operatorId: string; shared: boolean };
   };
   const pilots: Spec[] = [
-    { n: 1, name: "Thandi Mokoena", home: "FAPM", hours: 3100, available: "yes" },
-    { n: 2, name: "Pieter van Wyk", home: "FALA", hours: 6200, available: "yes", roster: { operatorId: rival.id, shared: true } },
-    { n: 3, name: "Sipho Dlamini", home: "FADN", hours: 2100, radius: 100, available: "yes" },
-    { n: 4, name: "Anele Naidoo", home: "FACT", hours: 4800, available: "yes" },
-    { n: 5, name: "Lerato Khumalo", home: "FAPM", hours: 2500, medicalDays: -20, available: "yes" },
-    { n: 6, name: "Johan Botha", home: "FAPM", hours: 3900, available: "yes", bookedDays: 10 },
-    { n: 7, name: "Zanele Dube", home: "FAPM", hours: 2800, ratings: ["E55P"], available: "yes" },
-    { n: 8, name: "Kabelo Sithole", home: "FAPM", hours: 3300, available: "no" },
-    { n: 9, name: "Naledi Mbeki", home: "FAPM", hours: 3000, available: "expired" },
-    { n: 10, name: "Dirk Pretorius", home: "FAPM", hours: 5200, available: "yes", roster: { operatorId: rival.id, shared: false } },
+    { n: 1, name: "Demo Pilot I", home: "FAPM", hours: 3100, available: "yes" },
+    { n: 2, name: "Demo Pilot G", home: "FALA", hours: 6200, available: "yes", roster: { operatorId: rival.id, shared: true } },
+    { n: 3, name: "Demo Pilot H", home: "FADN", hours: 2100, radius: 100, available: "yes" },
+    { n: 4, name: "Demo Pilot A", home: "FACT", hours: 4800, available: "yes" },
+    { n: 5, name: "Demo Pilot E", home: "FAPM", hours: 2500, medicalDays: -20, available: "yes" },
+    { n: 6, name: "Demo Pilot C", home: "FAPM", hours: 3900, available: "yes", bookedDays: 10 },
+    { n: 7, name: "Demo Pilot J", home: "FAPM", hours: 2800, ratings: ["E55P"], available: "yes" },
+    { n: 8, name: "Demo Pilot D", home: "FAPM", hours: 3300, available: "no" },
+    { n: 9, name: "Demo Pilot F", home: "FAPM", hours: 3000, available: "expired" },
+    { n: 10, name: "Demo Pilot B", home: "FAPM", hours: 5200, available: "yes", roster: { operatorId: rival.id, shared: false } },
   ];
 
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);

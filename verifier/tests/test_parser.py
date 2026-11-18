@@ -16,7 +16,7 @@ def record():
 
 
 def test_core_fields(record):
-    assert record.licence_number == "0270999999"
+    assert record.licence_number == "TEST-000001"
     assert record.holder_name == "Test Pilot"
     assert record.licence_type == "ATPL(A)"
     assert record.status == "Valid"

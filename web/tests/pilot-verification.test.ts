@@ -19,11 +19,11 @@ const allTrue = Object.fromEntries(COMPARED_FIELDS.map((f) => [f, true])) as Rec
 describe("document encryption at rest", () => {
   beforeEach(() => (process.env.DOCUMENT_ENCRYPTION_KEY = KEY));
   afterEach(() => delete process.env.DOCUMENT_ENCRYPTION_KEY);
-  const photo = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from("JFIF licence photo of Test Pilot 0271234567")]);
+  const photo = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from("JFIF licence photo of Test Pilot 0270000001")]);
 
   it("round-trips, and the stored bytes never contain the plaintext", () => {
     const blob = encryptDocument(photo, "sub1", "LICENCE");
-    assert.ok(!blob.includes(Buffer.from("0271234567")));
+    assert.ok(!blob.includes(Buffer.from("0270000001")));
     assert.ok(!blob.includes(Buffer.from("Test Pilot")));
     assert.deepEqual(decryptDocument(blob, "sub1", "LICENCE"), photo);
   });
@@ -111,13 +111,13 @@ describe("SACAA OTP relay", () => {
   it("is OFF by default", async () => {
     delete process.env.SACAA_OTP_RELAY;
     assert.equal(isOtpRelayEnabled(), false);
-    await assert.rejects(startLookup("0271234567"), (e: Error) => e instanceof OtpRelayUnavailableError && /switched off/.test(e.message));
+    await assert.rejects(startLookup("0270000001"), (e: Error) => e instanceof OtpRelayUnavailableError && /switched off/.test(e.message));
     await assert.rejects(completeLookup("s", "123456"), OtpRelayUnavailableError);
   });
 
   it("even when switched on, the portal client refuses (not implemented)", async () => {
     process.env.SACAA_OTP_RELAY = "true";
-    await assert.rejects(startLookup("0271234567"), (e: Error) => /not implemented/.test(e.message));
+    await assert.rejects(startLookup("0270000001"), (e: Error) => /not implemented/.test(e.message));
   });
 
   it("carries the legal-review warning and the route 404s while off", () => {
@@ -142,9 +142,9 @@ describe("consent and retention", () => {
   });
 
   it("validates what the pilot enters", () => {
-    assert.equal(submissionSchema.safeParse({ holderName: "T", licenceNumber: "0271234567" }).success, false);
+    assert.equal(submissionSchema.safeParse({ holderName: "T", licenceNumber: "0270000001" }).success, false);
     assert.equal(submissionSchema.safeParse({ holderName: "Test Pilot", licenceNumber: "02712; DROP" }).success, false);
-    const ok = submissionSchema.safeParse({ holderName: "Test Pilot", licenceNumber: "0271234567", medicalClass: "1", licenceExpiresAt: "2027-03-14", ratings: ["h125"] });
+    const ok = submissionSchema.safeParse({ holderName: "Test Pilot", licenceNumber: "0270000001", medicalClass: "1", licenceExpiresAt: "2027-03-14", ratings: ["h125"] });
     assert.equal(ok.success, true);
     assert.deepEqual(ok.success && ok.data.ratings, ["H125"]);
   });

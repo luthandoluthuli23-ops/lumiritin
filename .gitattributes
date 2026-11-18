@@ -1,0 +1,2 @@
+# Logbook test fixtures are byte-exact (encodings, BOMs, CRLF): never let Git convert their line endings.
+web/tests/fixtures/logbooks/* -text

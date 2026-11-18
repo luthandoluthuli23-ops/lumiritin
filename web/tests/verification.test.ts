@@ -92,21 +92,21 @@ describe("a failed, timed-out or blocked lookup is NEVER a pass", () => {
   });
 
   it("a record that doesn't match the profile is a MISMATCH, not a pass", () => {
-    const compared = compareProfile({ name: "Thandi Nkosi", licenceNumber: "0271234567" }, { name: "Someone Else", licenceNumber: "0271234567" });
+    const compared = compareProfile({ name: "Test Pilot", licenceNumber: "0270000001" }, { name: "Someone Else", licenceNumber: "0270000001" });
     assert.equal(resultFromLookup("VERIFIED", compared), "MISMATCH");
   });
 
   it("only a record whose every compared field matches is a PASS", () => {
     const compared = compareProfile(
-      { name: "Thandi  Nkosi", licenceNumber: "0271234567", licenceType: "CPL(A)" },
-      { name: "NKOSI, THANDI", licenceNumber: "1234567", licenceType: "CPL (A)" },
+      { name: "Test  Pilot", licenceNumber: "0270000001", licenceType: "CPL(A)" },
+      { name: "PILOT, TEST", licenceNumber: "0000001", licenceType: "CPL (A)" },
     );
     assert.ok(compared.every((f) => f.match), JSON.stringify(compared));
     assert.equal(resultFromLookup("VERIFIED", compared), "PASS");
   });
 
   it("a field missing from the record is not evidence of a match", () => {
-    const compared = compareProfile({ name: "Thandi Nkosi", licenceNumber: "0271234567" }, { name: null, licenceNumber: "0271234567" });
+    const compared = compareProfile({ name: "Test Pilot", licenceNumber: "0270000001" }, { name: null, licenceNumber: "0270000001" });
     assert.equal(compared.find((f) => f.field === "name")?.match, false);
     assert.equal(resultFromLookup("VERIFIED", compared), "MISMATCH");
   });
