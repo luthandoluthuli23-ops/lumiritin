@@ -55,17 +55,21 @@ describe("honest copy", () => {
     assert.deepEqual(hits, []);
   });
 
-  it("the homepage leads with the pilot wallet and the exact trust line", () => {
-    const hero = readFileSync(join(ROOT, "components/home/Hero.tsx"), "utf8");
+  it("the pilots page leads with the wallet and the exact trust line; the homepage makes no unbacked claims", () => {
+    const hero = readFileSync(join(ROOT, "components/pilots/PilotHero.tsx"), "utf8");
     assert.match(hero, /Your licence, medical and logbook/);
     assert.match(hero, /We warn you on WhatsApp before anything expires\. Free for pilots, always\./);
     assert.match(hero, /Every crew profile checked against SACAA records\./);
     assert.match(hero, /href="\/verification"[\s\S]{0,400}Each profile shows the date it was last verified\./);
-    // Comments may explain what was removed; only the rendered code counts.
-    const home = readFileSync(join(ROOT, "app/page.tsx"), "utf8")
-      .replace(/\/\/.*$/gm, "")
-      .replace(/\/\*[\s\S]*?\*\//g, "");
-    assert.ok(!/\/charter|\/empty-legs|\/operator/i.test(home), "no links to charter, empty legs or operator tools on the homepage");
+    assert.match(readFileSync(join(ROOT, "app/pilots/page.tsx"), "utf8"), /<PilotHero \/>/);
+    // The homepage: no placeholder counters, no public licence lookup, and the wallet pitch lives on /pilots.
+    const home = ["app/page.tsx", "components/home/Hero.tsx", "components/home/EmptyLegSearch.tsx", "components/home/PortalCtas.tsx"]
+      .map((f) => readFileSync(join(ROOT, f), "utf8"))
+      .join("\n");
+    assert.ok(!/MetricCounters|\/api\/verify|Dispatch time/.test(home), "no counters or public lookup on the homepage");
+    assert.ok(!/Your licence, medical and logbook in one place/.test(home), "the wallet pitch is only on the pilots page");
+    assert.match(home, /href: "\/pilots"/);
+    assert.match(home, /href: "\/operators"/);
   });
 });
 

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <main className={`${pageCls} max-w-3xl`}>
-      <PageHeader eyebrow="About" title="About Lumiritin" subtitle="The free wallet for South African pilots: licence, medical and logbook in one place." />
+      <PageHeader eyebrow="About" title="About Lumiritin" subtitle="Private aviation for South Africa: pilots, operators and passengers on one platform." />
 
       <section className="mt-10 space-y-4 text-slate-tac">
         <h2 className="font-display text-3xl text-ivory">Who we are</h2>

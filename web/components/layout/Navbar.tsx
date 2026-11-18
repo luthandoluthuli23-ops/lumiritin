@@ -20,9 +20,10 @@ const CHARTER_MENU: { label: string; href: string | null }[] = [
   { label: "Helicopter", href: "/charter" },
 ];
 
-// Pilot-first: visitors see the wallet story. Charter, empty legs and operator sign-up keep their routes but aren't promoted.
+// Visitors: a page each for pilots and operators. Charter appears only when CHARTER_PUBLIC is on.
 const PUBLIC_LINKS: NavLink[] = [
-  { href: "/auth/signup?role=pilot", label: "For pilots" },
+  { href: "/pilots", label: "For pilots" },
+  { href: "/operators", label: "For operators" },
   { href: "/verification", label: "Verification" },
   { href: "/about", label: "About" },
 ];
@@ -69,7 +70,7 @@ export function Navbar({ session, demoSwitcher }: Props) {
   // Charter appears only when CHARTER_PUBLIC is on, and only for visitors and passengers (lib/features.ts).
   const showCharter = isCharterEnabled() && (!session || session.role === "PASSENGER");
   const links = session ? LINKS[session.role] : PUBLIC_LINKS;
-  const cta = session ? CTA[session.role] : { href: "/auth/signup?role=pilot", label: "Create free wallet" };
+  const cta = session ? CTA[session.role] : { href: "/auth/signup", label: "Get started" };
   const [charterOpen, setCharterOpen] = useState(false);
   useEffect(() => setCharterOpen(false), [pathname]);
 

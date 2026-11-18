@@ -13,8 +13,8 @@ const display = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", 
 const sans = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Lumiritin — The free pilot wallet",
-  description: "Your licence, medical and logbook in one place, with WhatsApp warnings before anything expires. Free for pilots, always.",
+  title: "Lumiritin — Private aviation, South Africa",
+  description: "Empty-leg flights, crew checked against SACAA records, and a free wallet for pilots. One platform for passengers, operators and pilots.",
 };
 
 // viewport-fit=cover lets the page extend under notches/home indicators (the pt-safe/pb-safe utilities keep content clear of them).

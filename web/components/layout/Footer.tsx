@@ -13,13 +13,14 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <p className="font-display text-3xl text-gold-light">Lumiritin</p>
-          <p className="mt-3 text-sm text-slate-tac">The free wallet for South African pilots: licence, medical and logbook in one place.</p>
+          <p className="mt-3 text-sm text-slate-tac">Private aviation for South Africa: pilots, operators and passengers on one platform.</p>
         </div>
 
         <nav aria-label="Platform">
           <h2 className="text-xs uppercase tracking-[0.25em] text-gold">Platform</h2>
           <ul className="mt-4 space-y-1 text-sm text-slate-tac">
-            <li><Link href="/auth/signup?role=pilot" className={link}>For pilots</Link></li>
+            <li><Link href="/pilots" className={link}>For pilots</Link></li>
+            <li><Link href="/operators" className={link}>For operators</Link></li>
             <li><Link href="/verification" className={link}>How verification works</Link></li>
             <li><Link href="/about" className={link}>About</Link></li>
             {charterOn && <li><Link href="/charter" className={link}>Helicopter charter</Link></li>}
