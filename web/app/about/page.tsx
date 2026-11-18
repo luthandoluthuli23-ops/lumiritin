@@ -19,6 +19,9 @@ export default function AboutPage() {
         <p>
           Lumiritin was started by <span className="text-ivory">{COMPANY.founderName}</span>. {COMPANY.founderBackground}
         </p>
+        <p>
+          The Lumiritin app takes its name from <span className="text-ivory">{COMPANY.companyName}</span>, the company behind it.
+        </p>
       </section>
 
       <section className="mt-10 space-y-4 text-slate-tac">

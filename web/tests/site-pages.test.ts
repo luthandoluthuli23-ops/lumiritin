@@ -32,7 +32,12 @@ describe("about, contact and footer (Task 2)", () => {
   });
 
   it("unset contact details and company facts are clearly marked placeholders, never invented values", () => {
-    for (const v of Object.values(COMPANY)) assert.match(v, /^\[[A-Z_]+\]$/);
+    // Given by the owner on 2026-11-18:
+    assert.equal(COMPANY.companyName, "Lumiritin Aviation");
+    assert.equal(COMPANY.companyRegistration, "2026/770269/07");
+    assert.match(COMPANY.whyStarted, /logbook/);
+    // Still unknown → still a clearly marked placeholder, never a guess:
+    for (const k of ["founderName", "founderBackground", "cityProvince", "informationOfficer"] as const) assert.match(COMPANY[k], /^\[[A-Z_]+\]$/, k);
     if (!process.env.NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164) {
       assert.equal(SITE_CONTACT.phoneDisplay, "082 839 9906");
       assert.equal(SITE_CONTACT.whatsappUrl, "https://wa.me/27828399906");

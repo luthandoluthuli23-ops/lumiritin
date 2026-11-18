@@ -65,7 +65,7 @@ describe("honest copy", () => {
     const home = readFileSync(join(ROOT, "app/page.tsx"), "utf8")
       .replace(/\/\/.*$/gm, "")
       .replace(/\/\*[\s\S]*?\*\//g, "");
-    assert.ok(!/\/charter|\/empty-legs|operator/i.test(home), "no charter, empty legs or operator tools on the homepage");
+    assert.ok(!/\/charter|\/empty-legs|\/operator/i.test(home), "no links to charter, empty legs or operator tools on the homepage");
   });
 });
 
@@ -87,8 +87,8 @@ describe("charter switch (CHARTER_PUBLIC)", () => {
     }
   });
 
-  it("served airfields: only well-formed ICAO codes, none by default", () => {
-    assert.deepEqual(servedAirfields(), []);
+  it("served airfields: the six major airports by default; an override takes only well-formed ICAO codes", () => {
+    assert.deepEqual(servedAirfields(), ["FAOR", "FACT", "FADN", "FALA", "FAPE", "FAKN"]);
     process.env.CHARTER_SERVED_AIRFIELDS = " fala, FACT ,bad,FA1X,,FAOR";
     assert.deepEqual(servedAirfields(), ["FALA", "FACT", "FAOR"]);
   });

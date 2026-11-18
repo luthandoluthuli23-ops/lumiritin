@@ -21,14 +21,16 @@ const ROLES: { id: Role; blurb: string; icon: string }[] = [
 interface Props {
   airfields: AirfieldOption[];
   initialRole: Role | null;
+  /** Home airfield ICAO pre-filled from the homepage ("" for none). */
+  initialHome?: string;
   next: string | null;
 }
 
-export function SignupFlow({ airfields, initialRole, next }: Props) {
+export function SignupFlow({ airfields, initialRole, initialHome = "", next }: Props) {
   const [role, setRole] = useState<Role | null>(initialRole);
   const [isPrivate, setIsPrivate] = useState(false);
   const [crewRole, setCrewRole] = useState<"PILOT" | "CABIN_CREW">("PILOT");
-  const [home, setHome] = useState("");
+  const [home, setHome] = useState(initialHome);
   const [base, setBase] = useState("");
   const [ratings, setRatings] = useState<string[]>([]);
   const [ratingDraft, setRatingDraft] = useState("");

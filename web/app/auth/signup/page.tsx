@@ -27,7 +27,13 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           <Link href="/auth/signin" className="text-gold-light underline underline-offset-4">Sign in</Link>
         </p>
       </div>
-      <SignupFlow airfields={airfields} initialRole={initialRole} next={safeNextPath(sp.next)} />
+      <SignupFlow
+        airfields={airfields}
+        initialRole={initialRole}
+        // ?home=FALA from the homepage "Detect yours": pre-fills the home airfield (only if it is a real one).
+        initialHome={airfields.some((a) => a.icao === sp.home?.toUpperCase()) ? sp.home!.toUpperCase() : ""}
+        next={safeNextPath(sp.next)}
+      />
     </main>
   );
 }

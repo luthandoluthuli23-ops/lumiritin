@@ -26,15 +26,20 @@ export const SITE_CONTACT = {
 } as const;
 
 /**
- * Who is behind Lumiritin (shown on /about and in the legal pages). Every value is a placeholder until the owner
- * replaces it: these are facts about real people and a real company, so they must never be guessed.
+ * Who is behind Lumiritin (shown on /about and in the legal pages). Company name, registration and the "why" story were
+ * given by the owner on 2026-11-18; anything still in [BRACKETS] is a placeholder: these are facts about real people
+ * and a real company, so they must never be guessed.
  */
 export const COMPANY = {
   founderName: "[FOUNDER_NAME]",
   founderBackground: "[FOUNDER_BACKGROUND]",
-  whyStarted: "[WHY_STARTED]",
-  companyName: "[COMPANY_NAME]",
-  companyRegistration: "[COMPANY_REGISTRATION_NUMBER]",
+  whyStarted:
+    "Lumiritin started with two frustrations we kept seeing. Good pilots losing evenings to re-typing logbooks and chasing " +
+    "paperwork, and pilots with hours to spare and no easy way to pick up a flight around their day job. So we built one " +
+    "place for both: your licence, medical and logbook kept current without the admin, and quick flying work near your " +
+    "home airfield whenever you want it. Less paperwork. More flying.",
+  companyName: "Lumiritin Aviation",
+  companyRegistration: "2026/770269/07",
   cityProvince: "[CITY_PROVINCE]",
   /** POPIA Information Officer (name and contact) for privacy requests. */
   informationOfficer: "[INFORMATION_OFFICER]",

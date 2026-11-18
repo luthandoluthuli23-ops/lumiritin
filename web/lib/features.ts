@@ -11,11 +11,19 @@ export const isCharterEnabled = (): boolean => {
 };
 
 /**
- * ICAO codes of the airfields charter is actually offered from/to (comma separated in CHARTER_SERVED_AIRFIELDS).
- * Every other airfield is listed as "Coming soon". [SERVED_AIRFIELDS]: a business decision, empty until it's made.
+ * The major South African airports Lumiritin serves (owner's decision, 2026-11-18). Shown on the homepage with a
+ * "Detect yours" button, and the default charter airfields. Every one is in the airfield table.
  */
-export const servedAirfields = (): string[] =>
-  (process.env.CHARTER_SERVED_AIRFIELDS ?? "")
+export const MAJOR_AIRPORTS = ["FAOR", "FACT", "FADN", "FALA", "FAPE", "FAKN"] as const;
+
+/**
+ * ICAO codes of the airfields charter is offered from/to. CHARTER_SERVED_AIRFIELDS (comma separated) overrides the
+ * default (MAJOR_AIRPORTS). Every other airfield is listed as "Coming soon".
+ */
+export const servedAirfields = (): string[] => {
+  const fromEnv = (process.env.CHARTER_SERVED_AIRFIELDS ?? "")
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter((s) => /^[A-Z]{4}$/.test(s));
+  return fromEnv.length ? fromEnv : [...MAJOR_AIRPORTS];
+};

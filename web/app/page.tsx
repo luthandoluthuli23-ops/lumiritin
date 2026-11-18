@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { Hero } from "@/components/home/Hero";
+import { NearestAirport } from "@/components/home/NearestAirport";
+import { listAirfields } from "@/lib/airfield-db";
+import { MAJOR_AIRPORTS } from "@/lib/features";
+
+export const dynamic = "force-dynamic";
 
 // Pilot-first homepage: the free wallet and logbook. Charter, empty legs and operator tools keep their routes but are
 // not promoted here. Everything below is a description of features that exist today, nothing more.
@@ -24,7 +29,10 @@ const STEPS = [
   { n: "3", title: "Stay current", body: "See every expiry date at a glance and get a WhatsApp warning before each one." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const airfields = await listAirfields();
+  const majors = MAJOR_AIRPORTS.map((icao) => airfields.find((a) => a.icao === icao)).filter((a) => a !== undefined);
+
   return (
     <main>
       <Hero />
@@ -40,6 +48,19 @@ export default function Home() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section aria-labelledby="airports" className="px-6 pb-16">
+        <div className="mx-auto max-w-7xl">
+          <h2 id="airports" className="font-display text-4xl text-ivory sm:text-5xl">Flying work near your airfield</h2>
+          <p className="mt-3 max-w-2xl text-slate-tac">
+            Pick up quick flights around your main job. Operators post crew requests, and the pilots closest to the departure
+            airfield hear first. We serve South Africa&apos;s major airports:
+          </p>
+          <div className="mt-8">
+            <NearestAirport majors={majors} airfields={airfields} />
+          </div>
         </div>
       </section>
 
