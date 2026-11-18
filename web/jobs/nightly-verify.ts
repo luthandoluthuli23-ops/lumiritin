@@ -6,6 +6,8 @@
 import { Prisma } from "@prisma/client";
 import { db } from "../lib/db";
 import { runVerifier, type VerifiedRecord } from "../lib/verifier";
+import { recordCheck } from "../lib/verification-checks";
+import { compareProfile, resultFromLookup } from "../lib/verification-state";
 
 const DELAY_MS = Number(process.env.VERIFY_DELAY_MS ?? 5000);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -81,6 +83,7 @@ async function main() {
       type: "PILOT_LICENCE",
       person: { consents: { some: { scope: "sacaa_verification", revokedAt: null } } },
     },
+    include: { person: { select: { fullName: true } } },
     orderBy: { lastVerifiedAt: { sort: "asc", nulls: "first" } },
   });
   console.log(`Verifying ${credentials.length} licence(s)`);
@@ -109,9 +112,25 @@ async function main() {
       }),
       db.credential.update({
         where: { id: cred.id },
-        data: { lastVerifiedAt: new Date(), lastVerificationResult: result.outcome },
+        // Only a successful lookup moves "last verified"; a failed, blocked or timed-out one records its outcome only.
+        data: { lastVerificationResult: result.outcome, ...(result.outcome === "VERIFIED" ? { lastVerifiedAt: new Date() } : {}) },
       }),
     ]);
+
+    // Profile state + append-only audit log. FAILED (error/block/timeout) never counts as a pass.
+    const compared = result.outcome === "VERIFIED" && result.record
+      ? compareProfile(
+          { name: cred.person.fullName, licenceNumber: cred.licenceNumber, licenceType: cred.licenceCategory },
+          { name: result.record.holder_name, licenceNumber: result.record.licence_number, licenceType: result.record.licence_type },
+        )
+      : null;
+    await recordCheck(cred.personId, {
+      source: "SACAA_PORTAL",
+      result: resultFromLookup(result.record || result.outcome !== "VERIFIED" ? result.outcome : "PORTAL_ERROR", compared),
+      credentialId: cred.id,
+      fieldsCompared: compared,
+      error: result.error,
+    });
 
     if (changes?.length) console.log(`${cred.licenceNumber}: ${changes.length} change(s)`);
     if (result.outcome === "BLOCKED") {

@@ -19,6 +19,8 @@ import { formatWindow } from "@/lib/empty-legs-shared";
 import { isLumiConfigured } from "@/lib/lumi";
 import { rollUp, syncPlatformFlights } from "@/lib/logbook";
 import { requireRole } from "@/lib/session";
+import { stateOf } from "@/lib/verification-checks";
+import { VerificationBadge } from "@/components/pilot/VerificationBadge";
 
 export const metadata: Metadata = { title: "Credential wallet — Lumiritin" };
 export const dynamic = "force-dynamic";
@@ -78,6 +80,7 @@ export default async function WalletPage() {
     select: { date: true, totalHours: true, picHours: true, nightHours: true, instrumentHours: true, multiEngineHours: true, turbineHours: true },
   });
   const totals = rollUp(person.logbook, entries);
+  const profileState = stateOf(person);
 
   const state = currentState(person.availability.map((a) => ({ state: a.state, startsAt: a.startsAt, endsAt: a.endsAt })));
   const blockedPeriods = person.availability.filter((a) => a.source === "ICAL").length;
@@ -97,6 +100,18 @@ export default async function WalletPage() {
       />
 
       <div className="mt-10 space-y-6">
+        <section aria-labelledby="verification-h" className={cardCls}>
+          <h2 id="verification-h" className="font-display text-2xl text-ivory">Verification</h2>
+          <VerificationBadge state={profileState} lastPassAt={person.lastPassAt} className="mt-3" />
+          <p className="mt-4 text-sm text-slate-tac">
+            Share your public check page with an operator: it shows only your name, licence type, state and last-verified date.
+          </p>
+          <p className="mt-2 break-all font-mono text-sm text-ivory">
+            <Link href={`/verify/${person.publicCode}`} className="underline decoration-gold/40 underline-offset-4 hover:text-gold-light">
+              /verify/{person.publicCode}
+            </Link>
+          </p>
+        </section>
         <RosterAndPings
           roster={person.rosterEntries.map((r) => ({ id: r.id, operatorName: r.operator.name, status: r.status, sharedToPool: r.sharedToPool }))}
           pings={person.pings.map((p) => ({
@@ -137,7 +152,7 @@ export default async function WalletPage() {
                 <dd className="mt-1 text-ivory"><Expiry date={c.expiresAt} /></dd>
               </div>
               <div>
-                <dt className={labelCls}>Last checked</dt>
+                <dt className={labelCls}>Last SACAA lookup</dt>
                 <dd className="mt-1 text-ivory">{c.lastVerifiedAt ? formatDateTime(c.lastVerifiedAt) : "never"}</dd>
               </div>
             </dl>

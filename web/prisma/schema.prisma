@@ -140,6 +140,49 @@ enum VerificationMethod {
   LUMI_DOCUMENT
 }
 
+// Stored base of a profile's verification state. The five public states are derived (lib/verification-state.ts).
+enum VerificationBase {
+  UNVERIFIED
+  VERIFIED
+  MISMATCH
+}
+
+// Result of one check. FAILED (lookup error, timeout, block) is never a pass. RESET = identity change or consent withdrawn.
+enum CheckResult {
+  PASS
+  MISMATCH
+  FAILED
+  RESET
+}
+
+enum CheckSource {
+  SACAA_PORTAL // a live lookup (rarely possible: the portal is OTP-gated)
+  REVIEWER // a human reviewer compared the pilot's uploaded SACAA documents (the default path)
+  OTP_RELAY // pilot-relayed SACAA OTP lookup (feature-flagged off)
+  SYSTEM // automatic resets: name/licence change, consent withdrawn
+}
+
+// Append-only audit log of every verification check. A database trigger rejects UPDATE, DELETE and TRUNCATE, so earlier
+// checks can never be overwritten or removed. personId deliberately has no foreign key: deleting a person must not be
+// able to cascade into (or be blocked by) the audit trail.
+model VerificationCheck {
+  id             String      @id @default(cuid())
+  personId       String
+  credentialId   String?
+  checkedAt      DateTime    @default(now())
+  source         CheckSource
+  result         CheckResult
+  /// [{ field, profile, record, match }] for every field compared.
+  fieldsCompared Json?
+  error          String?
+  /// Reviewer email (REVIEWER checks).
+  reviewer       String?
+  note           String?
+
+  @@index([personId, checkedAt])
+  @@map("verification_check")
+}
+
 model Person {
   id               String    @id @default(cuid())
   fullName         String
@@ -160,6 +203,18 @@ model Person {
   logbookRef       String? // their handle/number in that logbook, for display only
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  // ── Profile verification (see lib/verification-state.ts) ──
+  // The stored base state. EXPIRING and CHECK_OVERDUE are derived from dates when the profile is read.
+  // A database trigger resets this to UNVERIFIED whenever fullName (here) or a licence number (credential) changes.
+  verificationBase VerificationBase @default(UNVERIFIED)
+  /// When the profile last PASSED a check (the date shown on the badge).
+  lastPassAt       DateTime?
+  /// The most recent check of any result; a FAILED latest check makes a verified profile CHECK_OVERDUE.
+  lastCheckAt      DateTime?
+  lastCheckResult  CheckResult?
+  /// Short public code for /verify/[code]. Unguessable; reveals only name, licence type, state and date.
+  publicCode       String           @unique @default(dbgenerated("substr(replace((gen_random_uuid())::text, '-'::text, ''::text), 1, 12)"))
 
   credentials   Credential[]
   medicals      Medical[]

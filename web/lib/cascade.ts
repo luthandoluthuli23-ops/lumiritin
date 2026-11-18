@@ -15,6 +15,7 @@ import { resolveState } from "./availability";
 import { benchEarningZar } from "./bench";
 import { matchPilots, SHORTLIST_SIZE, type CandidateInput, type MatchRequest, type MatchResult } from "./matching";
 import { sendCrewPing } from "./whatsapp";
+import { stateOf } from "./verification-checks";
 
 export const PING_WINDOW_MS = 10 * 60_000;
 export const CASCADE_WIDTH = SHORTLIST_SIZE;
@@ -39,7 +40,8 @@ async function loadCandidates(client: Tx | typeof db, now: Date, role: CrewRole)
   const people = await client.person.findMany({
     where: { role },
     include: {
-      credentials: { where: { type: CRED_TYPE_FOR_ROLE[role] }, include: { ratings: true }, take: 1 },
+      // All credentials (not just this role's) feed the profile's EXPIRING / CHECK_OVERDUE state.
+      credentials: { include: { ratings: true }, orderBy: { createdAt: "asc" } },
       medicals: true,
       logbook: { select: { totalHours: true } },
       flightLog: { select: { totalHours: true } },
@@ -51,7 +53,7 @@ async function loadCandidates(client: Tx | typeof db, now: Date, role: CrewRole)
   const coords = new Map(airfields.map((a) => [a.icao, { lat: a.lat, lng: a.lng }]));
 
   return people.map((p) => {
-    const cred = p.credentials[0];
+    const cred = p.credentials.find((c) => c.type === CRED_TYPE_FOR_ROLE[role]);
     return {
       personId: p.id,
       name: p.fullName,
@@ -71,6 +73,9 @@ async function loadCandidates(client: Tx | typeof db, now: Date, role: CrewRole)
       windows: p.availability.map((a) => ({ state: a.state, startsAt: a.startsAt, endsAt: a.endsAt })),
       rosterOperatorIds: p.rosterEntries.map((r) => r.operatorId),
       sharedToPool: p.rosterEntries.some((r) => r.sharedToPool),
+      // Derived from the stored base, the last pass/check and every credential, rating and medical expiry.
+      profileState: stateOf(p, now),
+      lastPassAt: p.lastPassAt,
     };
   });
 }

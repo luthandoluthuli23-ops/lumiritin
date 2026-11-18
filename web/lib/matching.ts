@@ -2,6 +2,7 @@
 // The same inputs always produce the same ranking, and every point can be traced to a line in `breakdown`.
 //
 // Hard gates (a pilot failing ANY gate is excluded, and the reasons are returned):
+//   0. Profile state    only VERIFIED and EXPIRING profiles are ever returned (lib/verification-state.ts)
 //   1. Pool access      own roster, freelancer, or shared to the pool AND the requester contributes to it
 //   2. Availability     AVAILABLE for the whole job window (BOOKED and OFF are ignored completely)
 //   3. Type rating      exact match for every required aircraft type, checked against SACAA records, valid through the job
@@ -13,6 +14,7 @@
 // Score for eligible pilots (max 100): proximity 60 + experience 25 + verification freshness 15.
 import { resolveState, type AvailabilityWindow } from "@/lib/availability";
 import { haversineKm, type Coordinates } from "@/lib/geo";
+import { badgeText, isSearchable, type ProfileState } from "@/lib/verification-state";
 
 // ─── Tunable policy (change here, nowhere else) ─────────────────────────────
 
@@ -54,6 +56,10 @@ export interface CandidateInput {
   rosterOperatorIds: string[];
   /** True if any of their active rosters offers them to the shared pool. */
   sharedToPool: boolean;
+  /** Derived profile verification state; only VERIFIED and EXPIRING can be returned to an operator. */
+  profileState: ProfileState;
+  /** When the profile last passed a check (for the badge date). */
+  lastPassAt: Date | null;
 }
 
 export interface MatchRequest {
@@ -72,6 +78,7 @@ export interface MatchRequest {
 }
 
 export type ExclusionCode =
+  | "PROFILE_NOT_VERIFIED"
   | "POOL_ACCESS"
   | "BOOKED"
   | "OFF"
@@ -89,6 +96,7 @@ export type ExclusionCode =
   | "LOW_HOURS";
 
 export const EXCLUSION_LABEL: Record<ExclusionCode, string> = {
+  PROFILE_NOT_VERIFIED: "Profile not currently verified against SACAA records",
   POOL_ACCESS: "On another operator's roster and not available to you",
   BOOKED: "Booked or blocked for this period",
   OFF: "Not marked available",
@@ -204,6 +212,9 @@ export function evaluate(c: CandidateInput, req: MatchRequest): ExclusionCode[] 
   const end = req.endsAt.getTime();
   const isPilot = req.role === "PILOT";
 
+  // 0. Profile state: crew search returns only VERIFIED and EXPIRING profiles, whatever else is true.
+  if (!isSearchable(c.profileState)) why.push("PROFILE_NOT_VERIFIED");
+
   // 1. Pool access
   const own = c.rosterOperatorIds.includes(req.operatorId);
   const freelancer = c.rosterOperatorIds.length === 0;
@@ -271,20 +282,14 @@ function toMatch(c: CandidateInput, req: MatchRequest): Match {
   const km = c.homeCoords && req.departure ? haversineKm(c.homeCoords, req.departure) : null;
   const prox = proximityPoints(km);
   const exp = experiencePoints(c.totalHours);
-  const fresh = freshnessPoints(c.licence?.lastVerifiedAt ?? null, req.now);
+  const fresh = freshnessPoints(c.lastPassAt, req.now);
 
   const medical = c.medicals.slice().sort((a, b) => (b.expiresAt?.getTime() ?? 0) - (a.expiresAt?.getTime() ?? 0))[0];
   const own = c.rosterOperatorIds.includes(req.operatorId);
   const isPilot = req.role === "PILOT";
-  const verified = c.licence?.lastVerificationResult === "VERIFIED";
-  // Be honest about HOW the credential was verified: a live SACAA portal check vs Lumi reading the holder's document.
-  const credentialValue = !verified
-    ? "Self-declared"
-    : c.licence?.lastVerificationMethod === "SACAA_PORTAL"
-      ? "Checked against SACAA records"
-      : c.licence?.lastVerificationMethod === "LUMI_DOCUMENT"
-        ? "Lumi-verified"
-        : "Verified";
+  // The profile badge: state + the date it was last verified against SACAA records (only searchable states get here).
+  const credentialValue = badgeText(c.profileState, c.lastPassAt);
+  const verified = c.profileState === "VERIFIED";
 
   return {
     personId: c.personId,
