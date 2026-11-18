@@ -36,7 +36,7 @@ export const COMPANY = {
   companyRegistration: "2026/770269/07",
   cityProvince: "Pietermaritzburg, KwaZulu-Natal",
   /** POPIA Information Officer (name and contact) for privacy requests. */
-  informationOfficer: "[INFORMATION_OFFICER]",
+  informationOfficer: "Luthando Luthuli (hello@lumiritin.co.za, 082 839 9906)",
 } as const;
 
 /** "Our story" on /about, in the owner's own words (2026-11-18). One string per paragraph. */

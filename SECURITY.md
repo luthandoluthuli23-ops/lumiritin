@@ -4,7 +4,7 @@ Lumiritin holds pilots' identity documents and credentials, so we take reports s
 
 ## Reporting a vulnerability
 
-Email **[SECURITY_EMAIL]** with:
+Email **hello@lumiritin.co.za** with:
 
 - what you found and where (URL, endpoint or file),
 - steps to reproduce,
@@ -13,7 +13,7 @@ Email **[SECURITY_EMAIL]** with:
 Please do **not** open a public GitHub issue for a vulnerability, and do not access, change or delete other people's
 data while testing. Use your own test account.
 
-We aim to acknowledge reports within [RESPONSE_DAYS] working days.
+We aim to acknowledge every report as quickly as we can.
 
 ## Scope
 

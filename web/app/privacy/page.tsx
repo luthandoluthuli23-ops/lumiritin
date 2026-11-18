@@ -6,7 +6,7 @@ import { COMPANY, SITE_CONTACT } from "@/lib/site-contact";
 export const metadata: Metadata = { title: "Privacy policy — Lumiritin", robots: { index: false } };
 
 // DRAFT. The lists below describe what the code actually stores and which services it uses. The legal wording
-// ([PRIVACY_POLICY_TEXT]) must be written or reviewed by someone qualified in POPIA before launch.
+// (the full policy) must be written or reviewed by someone qualified in POPIA; until then the page says so.
 const WHAT_WE_STORE = [
   "Account details: your name, email address, phone or WhatsApp number, and a scrambled (hashed) password.",
   "Pilot profile: licence number and type, ratings, medical class and expiry dates, home airfield, travel radius and availability.",
@@ -28,9 +28,12 @@ const SERVICES = [
 export default function PrivacyPage() {
   return (
     <main className={`${pageCls} max-w-3xl`}>
-      <PageHeader eyebrow="Legal" title="Privacy policy" subtitle="Draft. To be finalised before launch." />
+      <PageHeader eyebrow="Legal" title="Privacy policy" subtitle="Summary. The full version is being finalised." />
 
-      <p className="mt-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-ivory">[PRIVACY_POLICY_TEXT]</p>
+      <p className="mt-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-ivory">
+        Our full privacy policy is being finalised. Until it is published, this page sets out what we store, the services we use and how to
+        reach our Information Officer about your data.
+      </p>
 
       <section className="mt-10 space-y-4 text-slate-tac">
         <h2 className="font-display text-3xl text-ivory">Who is responsible</h2>

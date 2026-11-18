@@ -40,8 +40,12 @@ describe("about, contact and footer (Task 2)", () => {
     assert.equal(COMPANY.cityProvince, "Pietermaritzburg, KwaZulu-Natal");
     assert.match(OUR_STORY[0], /^Lumiritin began at the aero club in Pietermaritzburg\./);
     assert.equal(OUR_STORY[OUR_STORY.length - 1], "Made by the aviation community, for the aviation community.");
-    // Still unknown → still a clearly marked placeholder, never a guess:
-    assert.match(COMPANY.informationOfficer, /^\[[A-Z_]+\]$/);
+    assert.equal(COMPANY.informationOfficer, "Luthando Luthuli (hello@lumiritin.co.za, 082 839 9906)");
+    // Nothing on a public page is left as a [PLACEHOLDER].
+    for (const p of ["app/about/page.tsx", "app/privacy/page.tsx", "app/terms/page.tsx", "components/layout/Footer.tsx"]) {
+      assert.doesNotMatch(src(p).replace(/\/\/.*$/gm, ""), /\[[A-Z][A-Z_]{2,}\]/, p);
+    }
+    for (const v of Object.values(COMPANY)) assert.doesNotMatch(v, /\[[A-Z_]+\]/);
     if (!process.env.NEXT_PUBLIC_WHATSAPP_CONCIERGE_E164) {
       assert.equal(SITE_CONTACT.phoneDisplay, "082 839 9906");
       assert.equal(SITE_CONTACT.whatsappUrl, "https://wa.me/27828399906");
