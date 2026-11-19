@@ -154,3 +154,20 @@ describe("verification emails", () => {
     assert.match(src, /notifiedState: "UNVERIFIED"/);
   });
 });
+
+describe("reply-to", () => {
+  it("adds reply_to only when EMAIL_REPLY_TO is set", async () => {
+    process.env.RESEND_API_KEY = "re_test_123";
+    const bodies: Record<string, unknown>[] = [];
+    globalThis.fetch = (async (_u: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch;
+    delete process.env.EMAIL_REPLY_TO;
+    await sendEmail({ to: "a@b.co", subject: "s", html: "<p>x</p>" });
+    process.env.EMAIL_REPLY_TO = "owner@example.com";
+    await sendEmail({ to: "a@b.co", subject: "s", html: "<p>x</p>" });
+    assert.equal(bodies[0].reply_to, undefined);
+    assert.deepEqual(bodies[1].reply_to, ["owner@example.com"]);
+  });
+});

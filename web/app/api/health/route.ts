@@ -19,6 +19,7 @@ export async function GET() {
   const features = {
     RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
     EMAIL_FROM: Boolean(process.env.EMAIL_FROM),
+    EMAIL_REPLY_TO: Boolean(process.env.EMAIL_REPLY_TO?.includes("@")),
     emailSenderDomain: (from.match(/@([^>s]+)/)?.[1] ?? "").toLowerCase(),
     DOCUMENT_ENCRYPTION_KEY: Boolean(process.env.DOCUMENT_ENCRYPTION_KEY),
     REVIEWER_EMAILS: (process.env.REVIEWER_EMAILS ?? "").split(",").filter((e) => e.includes("@")).length,

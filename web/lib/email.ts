@@ -9,6 +9,12 @@ const RESEND_URL = "https://api.resend.com/emails";
 // ideal for testing. Set EMAIL_FROM to a verified domain address for production.
 const FROM = process.env.EMAIL_FROM ?? "Lumiritin <onboarding@resend.dev>";
 
+/** Where replies go (EMAIL_REPLY_TO in Vercel; kept out of the repo because it's a personal inbox). */
+const replyTo = () => {
+  const r = process.env.EMAIL_REPLY_TO?.trim();
+  return r && r.includes("@") ? { reply_to: [r] } : {};
+};
+
 export const isEmailConfigured = () => Boolean(process.env.RESEND_API_KEY);
 
 export interface EmailMessage {
@@ -28,7 +34,7 @@ export async function sendEmail(msg: EmailMessage): Promise<{ ok: boolean; error
     const res = await fetch(RESEND_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: [msg.to], subject: msg.subject, html: msg.html, text: msg.text }),
+      body: JSON.stringify({ from: FROM, to: [msg.to], subject: msg.subject, html: msg.html, text: msg.text, ...replyTo() }),
       signal: AbortSignal.timeout(10_000), // a slow provider must never hang a request
     });
     if (!res.ok) {
