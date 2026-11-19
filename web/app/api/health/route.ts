@@ -14,6 +14,18 @@ export async function GET() {
     APP_BASE_URL: Boolean(process.env.APP_BASE_URL),
   };
 
+  // Optional features (booleans, plus the sender's domain, which is public in every email anyway). Not part of `ok`.
+  const from = process.env.EMAIL_FROM ?? "onboarding@resend.dev";
+  const features = {
+    RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
+    EMAIL_FROM: Boolean(process.env.EMAIL_FROM),
+    emailSenderDomain: (from.match(/@([^>s]+)/)?.[1] ?? "").toLowerCase(),
+    DOCUMENT_ENCRYPTION_KEY: Boolean(process.env.DOCUMENT_ENCRYPTION_KEY),
+    REVIEWER_EMAILS: (process.env.REVIEWER_EMAILS ?? "").split(",").filter((e) => e.includes("@")).length,
+    ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY),
+    commit: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7) || null,
+  };
+
   let database: { status: "ok"; airfields: number } | { status: "error"; code: string; hint: string };
   try {
     database = { status: "ok", airfields: await db.airfield.count() };
@@ -35,7 +47,7 @@ export async function GET() {
   const ok = Object.values(env).every(Boolean) && database.status === "ok" && database.airfields > 0;
   const missingAirfields = database.status === "ok" && database.airfields === 0;
   return NextResponse.json(
-    { ok, env, database, ...(missingAirfields ? { hint: "No airfields found. Run `npm run db:seed:airfields`." } : {}) },
+    { ok, env, features, database, ...(missingAirfields ? { hint: "No airfields found. Run `npm run db:seed:airfields`." } : {}) },
     { status: ok ? 200 : 503, headers: { "Cache-Control": "no-store" } },
   );
 }
