@@ -122,3 +122,35 @@ describe("sending", () => {
     assert.match(down.error ?? "", /fetch failed/);
   });
 });
+
+describe("verification emails", () => {
+  it("the pilot gets a 'received' email and each reviewer gets a queue link, via Resend", async () => {
+    process.env.RESEND_API_KEY = "re_test_123";
+    process.env.APP_BASE_URL = "https://lumiritin.co.za";
+    const sent: { to: string[]; subject: string; html: string }[] = [];
+    globalThis.fetch = (async (_u: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify({ id: "x" }), { status: 200 });
+    }) as typeof fetch;
+    const { sendSubmissionReceivedEmail, sendReviewerQueueEmail } = await import("../lib/email");
+    assert.equal((await sendSubmissionReceivedEmail({ to: "p@x.co", name: "Thandi" })).ok, true);
+    assert.equal((await sendReviewerQueueEmail("r@x.co")).ok, true);
+    assert.equal(sent[0].subject, "We've received your documents");
+    assert.match(sent[0].html, /Hi Thandi/);
+    assert.match(sent[0].html, /https:\/\/lumiritin\.co\.za\/wallet\/verify/);
+    assert.match(sent[1].html, /https:\/\/lumiritin\.co\.za\/admin\/review/);
+    assert.doesNotMatch(sent[1].html, /Thandi/);
+  });
+
+  it("the welcome email no longer claims the AI verifies licences", () => {
+    const { html } = buildWelcomeEmail({ firstName: "A", role: "PILOT" });
+    assert.doesNotMatch(html, /AI concierge checks/);
+    assert.match(html, /reviewer checks them/);
+  });
+
+  it("signup gives a new crew profile an UNVERIFIED baseline, so the first approval is emailed", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../app/api/auth/signup/route.ts", import.meta.url), "utf8");
+    assert.match(src, /notifiedState: "UNVERIFIED"/);
+  });
+});

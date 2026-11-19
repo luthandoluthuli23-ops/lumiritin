@@ -113,6 +113,9 @@ export async function POST(req: NextRequest) {
             data: {
               fullName: `${input.firstName} ${input.lastName}`,
               email: input.email,
+              // Baseline for state-change emails: a new profile starts UNVERIFIED, so the first real change
+              // (e.g. a reviewer approving) is emailed instead of being swallowed as the silent first sighting.
+              notifiedState: "UNVERIFIED",
               whatsappE164: input.whatsapp,
               homeAirfieldIcao: input.homeAirfieldIcao,
               role: input.crewRole,

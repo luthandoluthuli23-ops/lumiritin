@@ -4,7 +4,9 @@ import { DOCUMENT_MEDIA, isDocumentStorageConfigured, MAX_DOCUMENT_BYTES, sniffD
 import { extractFromDocument, isLumiConfigured } from "@/lib/lumi";
 import { createSubmission, submissionSchema, type UploadedDocument } from "@/lib/pilot-verification";
 import { isRateLimited } from "@/lib/rate-limit";
+import { sendReviewerQueueEmail, sendSubmissionReceivedEmail } from "@/lib/email";
 import { getPilotPersonId } from "@/lib/session";
+import { syncStateNotification } from "@/lib/state-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +68,23 @@ export async function POST(req: NextRequest) {
   if (typeof medical === "string") return fail(422, "bad_medical_file", medical);
 
   const submissionId = await createSubmission(personId, parsed.data, [licence, medical]);
+
+  // Emails, after the response: "we've received your documents" to the pilot, a heads-up to each reviewer, and a
+  // state baseline (for older profiles that have none) so the reviewer's decision is emailed.
+  after(async () => {
+    await syncStateNotification(personId).catch((e) => console.error("[verification] state baseline failed:", e));
+    const p = await db.person.findUnique({ where: { id: personId }, select: { fullName: true, email: true, user: { select: { email: true } } } });
+    const to = p?.email ?? p?.user?.email;
+    if (to) {
+      const r = await sendSubmissionReceivedEmail({ to, name: p!.fullName.split(" ")[0] || p!.fullName });
+      if (!r.ok && r.error !== "not_configured") console.error("[verification] received email not sent:", r.error);
+    }
+    const reviewers = (process.env.REVIEWER_EMAILS ?? "").split(",").map((s) => s.trim()).filter((s) => s.includes("@"));
+    for (const rv of reviewers) {
+      const r = await sendReviewerQueueEmail(rv);
+      if (!r.ok && r.error !== "not_configured") console.error("[verification] reviewer email not sent:", r.error);
+    }
+  });
 
   // Lumi reads the licence photo for the reviewer's convenience, after the response (it can take a while).
   if (isLumiConfigured()) {

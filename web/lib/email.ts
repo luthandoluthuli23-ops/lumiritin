@@ -108,7 +108,7 @@ export function buildWelcomeEmail(p: { firstName: string; role: WelcomeRole }): 
   if (p.role === "PILOT") {
     intro = "Your crew account is ready. Here's how to get flight-ready:";
     steps = [
-      ["Verify with Lumi.", "Add your SACAA licence and ratings to your credential wallet, and our AI concierge checks them."],
+      ["Get verified.", "Upload a photo of your SACAA licence and medical. A Lumiritin reviewer checks them and we email you the result."],
       ["Bring your logbook.", "Import your existing hours (a CSV, or a photo of a logbook page), then flights you fly through Lumiritin log themselves."],
       ["Stay available.", "Keep your availability up to date so operators can offer you duties, and we'll remind you before anything expires."],
     ];
@@ -164,6 +164,35 @@ export async function sendStateChangeEmail(p: { to: string; name: string; state:
     "You're receiving this because you have a Lumiritin pilot account.",
   );
   return sendEmail({ to: p.to, subject: `Your verification status: ${p.state}`, html, text: `Hi ${p.name},\n\nYour verification status is now ${p.state}.\n${p.detail}\n\n${siteUrl("/wallet/verify")}` });
+}
+
+/** Sent to the pilot as soon as their licence and medical are uploaded for review. */
+export async function sendSubmissionReceivedEmail(p: { to: string; name: string }): Promise<{ ok: boolean; error?: string }> {
+  const html = shell(
+    `<p style="font-size:16px">Hi ${escapeHtml(p.name)},</p>
+     <p>Thanks, we've received your licence and medical. A Lumiritin reviewer will check them against your details and we'll email you as soon as there's a result.</p>
+     <p style="font-size:14px;color:#8b97ab">Your documents are stored encrypted and only reviewers can open them.</p>
+     <p style="margin-top:16px"><a href="${escapeHtml(siteUrl("/wallet/verify"))}" style="color:#e2b857">See your verification status →</a></p>`,
+    "You're receiving this because you asked Lumiritin to verify your documents.",
+  );
+  const text = `Hi ${p.name},
+
+Thanks, we've received your licence and medical. A Lumiritin reviewer will check them and we'll email you as soon as there's a result.
+
+${siteUrl("/wallet/verify")}`;
+  return sendEmail({ to: p.to, subject: "We've received your documents", html, text });
+}
+
+/** Tells the reviewers (REVIEWER_EMAILS) that a new submission is waiting. No pilot details in the email itself. */
+export async function sendReviewerQueueEmail(to: string): Promise<{ ok: boolean; error?: string }> {
+  const link = siteUrl("/admin/review");
+  const html = shell(
+    `<p style="font-size:16px">A pilot has uploaded documents for verification.</p>${button(link, "Open the review queue")}`,
+    "You're receiving this because you're a Lumiritin reviewer.",
+  );
+  return sendEmail({ to, subject: "New verification waiting for review", html, text: `A pilot has uploaded documents for verification.
+
+${link}` });
 }
 
 export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
