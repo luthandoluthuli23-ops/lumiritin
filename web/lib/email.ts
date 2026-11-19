@@ -201,6 +201,20 @@ export async function sendReviewerQueueEmail(to: string): Promise<{ ok: boolean;
 ${link}` });
 }
 
+/** The password-reset link (app/api/auth/forgot). */
+export async function sendPasswordResetEmail(p: { to: string; name: string; link: string }): Promise<{ ok: boolean; error?: string }> {
+  const name = p.name || "there";
+  const html = shell(
+    `<p style="font-size:16px">Hi ${escapeHtml(name)},</p>
+     <p>Someone asked to reset the password for your Lumiritin account. If it was you, set a new one here:</p>
+     ${button(p.link, "Set a new password")}
+     <p style="margin-top:20px;font-size:13px;color:#8b97ab">The link works for one hour, and only once. If you didn't ask for this, ignore this email and your password stays the same.</p>`,
+    "You're receiving this because a password reset was requested for your Lumiritin account.",
+  );
+  const text = `Hi ${name},\n\nSet a new Lumiritin password here (works for one hour, once):\n${p.link}\n\nIf you didn't ask for this, ignore this email.`;
+  return sendEmail({ to: p.to, subject: "Reset your Lumiritin password", html, text });
+}
+
 export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
   return sendEmail({
     to,

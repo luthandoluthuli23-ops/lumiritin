@@ -77,6 +77,7 @@ export function apiErrorMessage(data: { error?: string; issues?: { path: string;
     licence_already_registered: "That licence number is already registered.",
     aoc_already_registered: "That AOC number is already registered.",
     invalid_credentials: "Incorrect email or password.",
+    reset_link_invalid: "This reset link has expired or was already used. Request a new one.",
     rate_limited: "Too many attempts. Please wait a while and try again.",
     unauthorised: "Please sign in to continue.",
     forbidden: "Your account can't do that.",
